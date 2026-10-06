@@ -168,8 +168,8 @@
                 <!-- Fiyat Giriş Modu ve Tutar -->
                 <div class="space-y-2">
                     <div class="flex items-center justify-between">
-                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300" id="costLabel">
-                            Koli / Paket Alış Fiyatı (₺) *
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                            <span id="costLabelText">Paket / Koli Alış Fiyatı</span> (₺) *
                         </label>
                         <select name="price_mode" id="priceModeSelect" onchange="updateBaremCalc()" class="text-xs font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-slate-900 px-2 py-1 rounded-lg border border-amber-300 dark:border-slate-700 focus:outline-none cursor-pointer">
                             <option value="package">📦 Koli / Paket Fiyatı</option>
@@ -186,10 +186,12 @@
                         Depo / Hedef Şube
                     </label>
                     <select name="branch_id" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 dark:bg-slate-900 text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
-                        <option value="">Merkez / Genel Stok</option>
+                        {% if not active_branch_id or branches|length > 1 %}
+                        <option value="">🏢 Tüm Şubeler / Genel Stok</option>
+                        {% endif %}
                         {% for b in branches %}
-                        <option value="{{ b.BranchID }}" {% if active_branch_id == b.BranchID %}selected{% endif %}>
-                            {{ b.BranchName }}
+                        <option value="{{ b.BranchID }}" {% if active_branch_id == b.BranchID or branches|length == 1 %}selected{% endif %}>
+                            📍 {{ b.BranchName }}
                         </option>
                         {% endfor %}
                     </select>
@@ -364,13 +366,15 @@
             // Girilen tutar 1 koli/paket fiyatı
             unitCost = mult > 0 ? (costVal / mult) : costVal;
             totalCost = costVal * count;
-            document.getElementById('costLabel').innerText = `${pkgTypeName} Fiyatı (₺) *`;
+            const costTextEl = document.getElementById('costLabelText');
+            if (costTextEl) costTextEl.innerText = `${pkgTypeName} Alış Fiyatı`;
             document.getElementById('unitCostExplanation').innerText = `1 ${pkgTypeName} (${mult} adet) = ${formatMoney(costVal)} ₺ → 1 Adet Maliyeti: ${formatMoney(unitCost)}`;
         } else {
             // Girilen tutar doğrudan tekil 1 adet fiyatı
             unitCost = costVal;
             totalCost = costVal * totalQty;
-            document.getElementById('costLabel').innerText = 'Tek Adet Alış Fiyatı (₺) *';
+            const costTextEl = document.getElementById('costLabelText');
+            if (costTextEl) costTextEl.innerText = 'Tek Adet Alış Fiyatı';
             document.getElementById('unitCostExplanation').innerText = `Doğrudan adet fiyatı girildi: 1 Adet = ${formatMoney(unitCost)} (1 ${pkgTypeName} maliyeti: ${formatMoney(unitCost * mult)})`;
         }
 

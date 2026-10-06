@@ -73,64 +73,66 @@
                 </div>
 
                 <!-- Orta: Masaüstü Geniş Menü Bağlantıları (Geniş ekranlarda rahat gezinme) -->
-                <nav class="hidden md:flex items-center gap-1 lg:gap-2">
+                <nav class="hidden md:flex items-center gap-1.5 lg:gap-2">
                     {% if user.CanManageSales or user.IsSuperAdmin %}
-                    <a href="/sales" class="px-3 py-2 rounded-xl text-xs lg:text-sm font-semibold transition flex items-center gap-1.5 {% if active_page == 'sales' %}bg-amber-500 text-navy-950 font-bold shadow{% else %}text-slate-300 hover:text-white hover:bg-navy-800{% endif %}">
+                    <a href="/sales" class="px-3.5 py-2 rounded-xl text-xs lg:text-sm font-semibold transition flex items-center gap-1.5 {% if active_page == 'sales' %}bg-amber-500 text-navy-950 font-bold shadow{% else %}text-slate-300 hover:text-white hover:bg-navy-800{% endif %}">
                         <span>🛒</span> <span>Satış</span>
                     </a>
                     {% endif %}
 
                     {% if user.CanManagePurchases or user.IsSuperAdmin %}
-                    <a href="/purchases" class="px-3 py-2 rounded-xl text-xs lg:text-sm font-semibold transition flex items-center gap-1.5 {% if active_page == 'purchases' %}bg-amber-500 text-navy-950 font-bold shadow{% else %}text-slate-300 hover:text-white hover:bg-navy-800{% endif %}">
+                    <a href="/purchases" class="px-3.5 py-2 rounded-xl text-xs lg:text-sm font-semibold transition flex items-center gap-1.5 {% if active_page == 'purchases' %}bg-amber-500 text-navy-950 font-bold shadow{% else %}text-slate-300 hover:text-white hover:bg-navy-800{% endif %}">
                         <span>📦</span> <span>Mal Alış</span>
                     </a>
                     {% endif %}
 
                     {% if user.CanManageCashRegister or user.IsSuperAdmin %}
-                    <a href="/register" class="px-3 py-2 rounded-xl text-xs lg:text-sm font-semibold transition flex items-center gap-1.5 {% if active_page == 'register' %}bg-amber-500 text-navy-950 font-bold shadow{% else %}text-slate-300 hover:text-white hover:bg-navy-800{% endif %}">
+                    <a href="/register" class="px-3.5 py-2 rounded-xl text-xs lg:text-sm font-semibold transition flex items-center gap-1.5 {% if active_page == 'register' %}bg-amber-500 text-navy-950 font-bold shadow{% else %}text-slate-300 hover:text-white hover:bg-navy-800{% endif %}">
                         <span>💰</span> <span>Kasa</span>
                     </a>
                     {% endif %}
 
                     {% if user.CanViewReports or user.IsSuperAdmin %}
-                    <a href="/reports" class="px-3 py-2 rounded-xl text-xs lg:text-sm font-semibold transition flex items-center gap-1.5 {% if active_page == 'reports' %}bg-amber-500 text-navy-950 font-bold shadow{% else %}text-slate-300 hover:text-white hover:bg-navy-800{% endif %}">
+                    <a href="/reports" class="px-3.5 py-2 rounded-xl text-xs lg:text-sm font-semibold transition flex items-center gap-1.5 {% if active_page == 'reports' %}bg-amber-500 text-navy-950 font-bold shadow{% else %}text-slate-300 hover:text-white hover:bg-navy-800{% endif %}">
                         <span>📊</span> <span>Raporlar</span>
                     </a>
                     {% endif %}
 
                     {% if user.CanManagePurchases or user.CanManageUsers or user.IsSuperAdmin %}
-                    <a href="/admin/products" class="px-3 py-2 rounded-xl text-xs lg:text-sm font-semibold transition flex items-center gap-1.5 {% if active_page == 'admin_products' %}bg-amber-500 text-navy-950 font-bold shadow{% else %}text-slate-300 hover:text-white hover:bg-navy-800{% endif %}">
+                    <a href="/admin/products" class="px-3.5 py-2 rounded-xl text-xs lg:text-sm font-semibold transition flex items-center gap-1.5 {% if active_page == 'admin_products' %}bg-amber-500 text-navy-950 font-bold shadow{% else %}text-slate-300 hover:text-white hover:bg-navy-800{% endif %}">
                         <span>🏷️</span> <span>Stok Kartları</span>
                     </a>
                     {% endif %}
 
                     {% if user.CanManageUsers or user.IsSuperAdmin %}
-                    <a href="/admin/users" class="px-3 py-2 rounded-xl text-xs lg:text-sm font-semibold transition flex items-center gap-1.5 {% if active_page == 'admin' %}bg-amber-500 text-navy-950 font-bold shadow{% else %}text-slate-300 hover:text-white hover:bg-navy-800{% endif %}">
+                    <a href="/admin/users" class="px-3.5 py-2 rounded-xl text-xs lg:text-sm font-semibold transition flex items-center gap-1.5 {% if active_page == 'admin' %}bg-amber-500 text-navy-950 font-bold shadow{% else %}text-slate-300 hover:text-white hover:bg-navy-800{% endif %}">
                         <span>⚙️</span> <span>Yönetim</span>
                     </a>
                     {% endif %}
                 </nav>
 
                 <!-- Sağ: Tema, Kontrast ve Kullanıcı Menüsü -->
-                <div class="flex items-center gap-2 sm:gap-4">
-                    <button type="button" onclick="toggleHighContrast()" title="Yüksek Kontrast Modu"
-                            class="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-navy-800 transition">
-                        🔲
-                    </button>
-                    <button type="button" onclick="toggleTheme()" title="Karanlık / Aydınlık Mod"
-                            class="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-navy-800 transition">
-                        🌓
-                    </button>
+                <div class="flex items-center gap-2 sm:gap-3">
+                    <div class="flex items-center gap-0.5 bg-navy-800/80 p-1 rounded-xl border border-slate-700/60">
+                        <button type="button" onclick="toggleHighContrast()" title="Yüksek Kontrast Modu"
+                                class="w-8 h-8 flex items-center justify-center text-slate-300 hover:text-white rounded-lg hover:bg-slate-700 transition">
+                            🔲
+                        </button>
+                        <button type="button" onclick="toggleTheme()" title="Karanlık / Aydınlık Mod"
+                                class="w-8 h-8 flex items-center justify-center text-slate-300 hover:text-white rounded-lg hover:bg-slate-700 transition">
+                            🌓
+                        </button>
+                    </div>
 
-                    <div class="flex items-center gap-2 pl-2 border-l border-slate-700">
-                        <div class="text-right hidden md:block">
-                            <p class="text-xs font-semibold leading-none">{{ user.FullName }}</p>
-                            <span class="text-[10px] text-amber-400 font-medium">
-                                {% if user.IsSuperAdmin %}Süper Admin{% elif user.CanManageUsers %}Yönetici{% else %}Kasiyer/Personel{% endif %}
+                    <div class="flex items-center gap-3 pl-2 border-l border-slate-800">
+                        <div class="text-right hidden lg:block leading-tight">
+                            <p class="text-xs font-bold text-white">{{ user.FullName }}</p>
+                            <span class="text-[10px] text-amber-400 font-semibold uppercase tracking-wider">
+                                {% if user.IsSuperAdmin %}Süper Admin{% elif user.CanManageUsers %}Yönetici{% else %}Kasiyer{% endif %}
                             </span>
                         </div>
-                        <a href="/auth/logout" class="p-2 text-xs text-rose-400 hover:text-rose-300 hover:bg-navy-800 rounded-lg transition" title="Çıkış Yap">
-                            🚪 <span class="hidden sm:inline">Çıkış</span>
+                        <a href="/auth/logout" class="px-3 py-1.5 text-xs font-bold text-rose-400 hover:text-white hover:bg-rose-600/80 rounded-xl border border-rose-500/30 transition flex items-center gap-1.5 shadow-sm" title="Çıkış Yap">
+                            <span>🚪</span> <span class="hidden sm:inline">Çıkış</span>
                         </a>
                     </div>
                 </div>
