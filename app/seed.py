@@ -27,6 +27,17 @@ def init_db(db: Session = None):
             raw_conn = connection.connection.dbapi_connection
             raw_conn.executescript(sql_script)
 
+            # Mevcut veritabanında kolon yoksa ekle (Migration)
+            cursor = raw_conn.cursor()
+            cursor.execute("PRAGMA table_info(Purchases);")
+            columns = [row[1] for row in cursor.fetchall()]
+            if "PackageMultiplier" not in columns:
+                cursor.execute("ALTER TABLE Purchases ADD COLUMN PackageMultiplier INTEGER NOT NULL DEFAULT 1;")
+            if "PackageType" not in columns:
+                cursor.execute("ALTER TABLE Purchases ADD COLUMN PackageType TEXT NOT NULL DEFAULT 'Adet';")
+            raw_conn.commit()
+            cursor.close()
+
 
 def seed_data(db: Session):
     """Gerekli başlangıç verilerini ve örnek kayıtları idempotant olarak yükler."""

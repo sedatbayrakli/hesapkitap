@@ -66,19 +66,40 @@ def purchases_page(
 def add_purchase(
     request: Request,
     product_id: int = Form(...),
-    unit_cost: float = Form(...),
-    quantity: float = Form(...),
+    price_mode: str = Form("unit"),  # 'unit' (tek adet alış fiyatı) veya 'package' (koli/paket toplam fiyatı)
+    unit_cost: float = Form(...),    # Girilen fiyata göre birim maliyet veya paket fiyatı
+    package_type: str = Form("Adet"),  # 'Adet', '24 lü Koli', '12 li Paket', 'Özel'
+    package_multiplier: int = Form(1),  # Koli/Paket içi adet (örn: 24)
+    package_count: float = Form(1),     # Kaç koli veya kaç adet alındığı
     supplier_name: Optional[str] = Form(None),
     branch_id: Optional[str] = Form(None),
     csrf_token: str = Form(...),
     context: CurrentContext = Depends(require_can_manage_purchases),
     db: Session = Depends(get_db)
 ):
-    """Mal alış kaydı ekler ve ürün stoğunu artırır (Tek transaction)."""
+    """
+    Mal alış kaydı ekler ve ürün stoğunu artırır (Tek transaction).
+    Barem/Koli desteği:
+    - Örn: 5 koli 24'lü ayran alındığında stoğa 5 * 24 = 120 adet eklenir.
+    - Koli toplam fiyatı girildiyse (price_mode == 'package'), birim adet maliyeti otomatik hesaplanır.
+    """
     if not verify_csrf_token(request, csrf_token):
         raise HTTPException(status_code=400, detail="Geçersiz CSRF jetonu.")
 
     effective_branch = int(branch_id) if branch_id and branch_id.isdigit() else context.active_branch_id
+    multiplier = max(1, package_multiplier)
+    count = max(0.01, package_count)
+
+    # Toplam stoğa girecek tekil adet
+    total_qty = round(count * multiplier, 2)
+
+    # Birim tekil maliyet (1 adedin maliyeti)
+    if price_mode == "package":
+        # 1 koli/paket fiyatı girilmiş demektir
+        calculated_unit_cost = round(unit_cost / multiplier, 4)
+    else:
+        # Doğrudan 1 adedin birim maliyeti girilmiş demektir
+        calculated_unit_cost = round(unit_cost, 4)
 
     try:
         # Ürünü bul ve kilitle
@@ -94,14 +115,16 @@ def add_purchase(
             TenantID=context.effective_tenant_id,
             ProductID=product.ProductID,
             BranchID=effective_branch,
-            UnitCost=unit_cost,
-            Quantity=quantity,
+            UnitCost=calculated_unit_cost,
+            Quantity=total_qty,
+            PackageMultiplier=multiplier,
+            PackageType=package_type.strip() if package_type else "Adet",
             SupplierName=supplier_name.strip() if supplier_name else None
         )
         db.add(purchase)
 
-        # Stok miktarını artır
-        product.StockQty = round(product.StockQty + quantity, 2)
+        # Stok miktarını tekil adet olarak artır
+        product.StockQty = round(product.StockQty + total_qty, 2)
 
         db.commit()
     except Exception:

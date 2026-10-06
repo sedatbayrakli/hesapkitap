@@ -113,6 +113,8 @@ class Purchase(Base):
     BranchID = Column(Integer, ForeignKey("Branches.BranchID", ondelete="SET NULL"), nullable=True)
     UnitCost = Column(Float, nullable=False)
     Quantity = Column(Float, nullable=False)
+    PackageMultiplier = Column(Integer, default=1, nullable=False)  # Barem katsayısı (örn: 24'lü koli için 24)
+    PackageType = Column(String(50), default="Adet", nullable=False)  # 'Adet', '24 lü Koli', '12 li Paket' vb.
     SupplierName = Column(String(150), nullable=True)
     PurchaseDate = Column(DateTime, default=datetime.utcnow)
 

@@ -64,6 +64,8 @@ CREATE TABLE IF NOT EXISTS Purchases (
     BranchID INTEGER NULL,
     UnitCost REAL NOT NULL,
     Quantity REAL NOT NULL,
+    PackageMultiplier INTEGER NOT NULL DEFAULT 1,
+    PackageType TEXT NOT NULL DEFAULT 'Adet',
     SupplierName TEXT,
     PurchaseDate DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (TenantID) REFERENCES Tenants(TenantID) ON DELETE CASCADE,

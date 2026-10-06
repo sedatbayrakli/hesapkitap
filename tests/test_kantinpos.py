@@ -220,7 +220,7 @@ def test_05_sale_transaction_and_stock_reduction(client):
 
 
 def test_06_purchase_transaction_and_stock_increase(client):
-    """Mal alış işleminde ürün stok miktarının tek transaction'da artması testi."""
+    """Mal alış işleminde koli/barem çarpanı ile ürün stok miktarının tek transaction'da artması testi."""
     csrf = login_as(client, "patrona", "kantin123")
 
     with TestingSessionLocal() as db:
@@ -228,11 +228,14 @@ def test_06_purchase_transaction_and_stock_increase(client):
         initial_stock = prod.StockQty
         prod_id = prod.ProductID
 
-    add_qty = 20.0
+    # 2 koli x 24 adet = 48 adet stoğa girmeli
     res = client.post("/purchases", data={
         "product_id": prod_id,
-        "unit_cost": 29.5,
-        "quantity": add_qty,
+        "price_mode": "package",
+        "unit_cost": 240.0,  # Koli fiyatı 240 TL -> birim adet maliyeti 10 TL
+        "package_type": "24 lü Koli",
+        "package_multiplier": 24,
+        "package_count": 2,
         "supplier_name": "Toptancı Test",
         "csrf_token": csrf
     })
@@ -240,7 +243,7 @@ def test_06_purchase_transaction_and_stock_increase(client):
 
     with TestingSessionLocal() as db:
         updated_prod = db.query(Product).filter(Product.ProductID == prod_id).first()
-        assert updated_prod.StockQty == round(initial_stock + add_qty, 2)
+        assert updated_prod.StockQty == round(initial_stock + 48.0, 2)
 
 
 def test_07_daily_register_trigger_and_unique_constraint(client):
