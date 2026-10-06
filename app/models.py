@@ -86,6 +86,8 @@ class Product(Base):
     TenantID = Column(Integer, ForeignKey("Tenants.TenantID", ondelete="CASCADE"), nullable=False)
     Barcode = Column(String(100), nullable=True)
     ProductName = Column(String(150), nullable=False)
+    PackageType = Column(String(50), default="Adet", nullable=False)  # Barem tipi: '24 lü Koli', '12 li Paket', 'Adet' vb.
+    PackageMultiplier = Column(Integer, default=1, nullable=False)   # Stok kartı baremi: paket/koli içindeki adet (örn: 24)
     CurrentSalePrice = Column(Float, nullable=False)
     StockQty = Column(Float, default=0.0, nullable=False)
     CriticalStockLevel = Column(Float, default=0.0, nullable=False)

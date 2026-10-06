@@ -28,13 +28,15 @@ def purchases_page(
     if not context.effective_tenant_id:
         raise HTTPException(status_code=400, detail="Aktif işletme bulunamadı.")
 
-    # Ürün listesi ve son maliyet bilgileri
+    # Ürün listesi ve son maliyet bilgileri (Stok kartı barem özellikleri dahil)
     sql = """
         SELECT 
             p.ProductID,
             p.ProductName,
             p.Barcode,
             p.CurrentSalePrice,
+            p.PackageType,
+            p.PackageMultiplier,
             p.StockQty,
             (SELECT UnitCost FROM Purchases WHERE ProductID = p.ProductID ORDER BY PurchaseDate DESC, PurchaseID DESC LIMIT 1) AS LastUnitCost
         FROM Products p
@@ -68,9 +70,9 @@ def add_purchase(
     product_id: int = Form(...),
     price_mode: str = Form("unit"),  # 'unit' (tek adet alış fiyatı) veya 'package' (koli/paket toplam fiyatı)
     unit_cost: float = Form(...),    # Girilen fiyata göre birim maliyet veya paket fiyatı
-    package_type: str = Form("Adet"),  # 'Adet', '24 lü Koli', '12 li Paket', 'Özel'
-    package_multiplier: int = Form(1),  # Koli/Paket içi adet (örn: 24)
     package_count: float = Form(1),     # Kaç koli veya kaç adet alındığı
+    package_type: Optional[str] = Form(None),
+    package_multiplier: Optional[int] = Form(None),
     supplier_name: Optional[str] = Form(None),
     branch_id: Optional[str] = Form(None),
     csrf_token: str = Form(...),
@@ -79,37 +81,38 @@ def add_purchase(
 ):
     """
     Mal alış kaydı ekler ve ürün stoğunu artırır (Tek transaction).
-    Barem/Koli desteği:
-    - Örn: 5 koli 24'lü ayran alındığında stoğa 5 * 24 = 120 adet eklenir.
-    - Koli toplam fiyatı girildiyse (price_mode == 'package'), birim adet maliyeti otomatik hesaplanır.
+    Barem bilgileri (Koli çarpanı ve paket tipi) ürünün Stok Kartı'ndan otomatik alınır.
     """
     if not verify_csrf_token(request, csrf_token):
         raise HTTPException(status_code=400, detail="Geçersiz CSRF jetonu.")
 
     effective_branch = int(branch_id) if branch_id and branch_id.isdigit() else context.active_branch_id
-    multiplier = max(1, package_multiplier)
     count = max(0.01, package_count)
 
-    # Toplam stoğa girecek tekil adet
-    total_qty = round(count * multiplier, 2)
-
-    # Birim tekil maliyet (1 adedin maliyeti)
-    if price_mode == "package":
-        # 1 koli/paket fiyatı girilmiş demektir
-        calculated_unit_cost = round(unit_cost / multiplier, 4)
-    else:
-        # Doğrudan 1 adedin birim maliyeti girilmiş demektir
-        calculated_unit_cost = round(unit_cost, 4)
-
     try:
-        # Ürünü bul ve kilitle
+        # Ürünü bul ve kilitle (Stok kartı özelliklerini al)
         product = db.query(Product).filter(
             Product.ProductID == product_id,
             Product.TenantID == context.effective_tenant_id
         ).with_for_update().first()
 
         if not product:
-            raise HTTPException(status_code=404, detail="Ürün bulunamadı veya yetkisiz erişim.")
+            raise HTTPException(status_code=404, detail="Ürün stok kartı bulunamadı veya yetkisiz erişim.")
+
+        # Barem ve paket tipi ürünün kendi stok kartından gelir
+        multiplier = max(1, package_multiplier or product.PackageMultiplier or 1)
+        pkg_type = (package_type or product.PackageType or "Adet").strip()
+
+        # Toplam stoğa girecek tekil adet
+        total_qty = round(count * multiplier, 2)
+
+        # Birim tekil maliyet (1 adedin maliyeti)
+        if price_mode == "package":
+            # 1 koli/paket fiyatı girilmiş demektir
+            calculated_unit_cost = round(unit_cost / multiplier, 4)
+        else:
+            # Doğrudan 1 adedin birim maliyeti girilmiş demektir
+            calculated_unit_cost = round(unit_cost, 4)
 
         purchase = Purchase(
             TenantID=context.effective_tenant_id,
@@ -118,7 +121,7 @@ def add_purchase(
             UnitCost=calculated_unit_cost,
             Quantity=total_qty,
             PackageMultiplier=multiplier,
-            PackageType=package_type.strip() if package_type else "Adet",
+            PackageType=pkg_type,
             SupplierName=supplier_name.strip() if supplier_name else None
         )
         db.add(purchase)
@@ -139,20 +142,27 @@ def create_new_product(
     request: Request,
     product_name: str = Form(...),
     barcode: Optional[str] = Form(None),
+    package_type: str = Form("Adet"),
+    package_multiplier: int = Form(1),
     current_sale_price: float = Form(...),
     critical_stock_level: float = Form(0.0),
     csrf_token: str = Form(...),
     context: CurrentContext = Depends(require_can_manage_purchases),
     db: Session = Depends(get_db)
 ):
-    """Yeni ürün kartı oluşturur."""
+    """Yeni stok kartı oluşturur. Barem ve koli özellikleri stok kartına kaydedilir."""
     if not verify_csrf_token(request, csrf_token):
         raise HTTPException(status_code=400, detail="Geçersiz CSRF jetonu.")
+
+    mult = max(1, package_multiplier)
+    pkg_type = package_type.strip() if package_type and package_type.strip() else ("Adet" if mult == 1 else f"{mult}'li Paket")
 
     prod = Product(
         TenantID=context.effective_tenant_id,
         ProductName=product_name.strip(),
         Barcode=barcode.strip() if barcode and barcode.strip() else None,
+        PackageType=pkg_type,
+        PackageMultiplier=mult,
         CurrentSalePrice=current_sale_price,
         CriticalStockLevel=critical_stock_level,
         StockQty=0.0,

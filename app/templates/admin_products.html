@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+
+{% block title %}Stok Kartları Yönetimi — KantinPos{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Üst Başlık ve Aksiyonlar -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-extrabold text-navy-900 dark:text-white">🏷️ Stok Kartları & Ürün Tanımları</h1>
+            <p class="text-xs text-slate-500">Ürünlerin barem, koli/paket çarpanı, satış fiyatı ve kritik stok özelliklerini yönetin.</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+            <!-- Tüm İşletmelere Kartları Senkronize Etme Butonu -->
+            <form method="POST" action="/admin/products/sync-all" onsubmit="return confirm('Bu işletmedeki tüm stok kartları diğer işletmelere de kopyalanacak/güncellenecektir. Onaylıyor musunuz?')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button type="submit" 
+                        class="px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold hover:bg-slate-50 transition shadow-sm flex items-center gap-1.5 touch-target">
+                    <span>🔄</span> <span>Tüm İşletmelerde Geçerli Kıl (Senkronize Et)</span>
+                </button>
+            </form>
+
+            <button onclick="openNewStockCardModal()"
+                    class="px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-navy-950 font-bold text-xs sm:text-sm rounded-xl shadow-md transition touch-target flex items-center gap-1.5">
+                <span>+</span> <span>Yeni Stok Kartı Tanımla</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Arama ve Filtreleme Çubuğu -->
+    <div class="bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 flex items-center gap-3">
+        <div class="relative flex-1">
+            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">🔍</span>
+            <input type="text" id="stockCardSearch" oninput="filterStockCards(this.value)"
+                   placeholder="Stok kartlarında ürün adı veya barkod ara..." 
+                   class="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-300 dark:border-slate-600 dark:bg-slate-900 text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+        </div>
+        <div class="text-xs font-semibold text-slate-500">
+            Toplam: <b class="text-navy-900 dark:text-white" id="totalCardCount">{{ products|length }}</b> kart
+        </div>
+    </div>
+
+    <!-- Stok Kartları Tablosu -->
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm text-slate-600 dark:text-slate-300">
+                <thead class="bg-slate-50 dark:bg-slate-900/60 text-xs uppercase text-slate-500">
+                    <tr>
+                        <th class="px-4 py-3.5">Ürün Adı</th>
+                        <th class="px-4 py-3.5">Barkod</th>
+                        <th class="px-4 py-3.5">Paket / Barem Özelliği</th>
+                        <th class="px-4 py-3.5">Satış Fiyatı</th>
+                        <th class="px-4 py-3.5">Mevcut Stok</th>
+                        <th class="px-4 py-3.5">Kritik Seviye</th>
+                        <th class="px-4 py-3.5 text-right">İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 dark:divide-slate-700" id="stockCardTableBody">
+                    {% for p in products %}
+                    <tr class="stock-card-row hover:bg-slate-50/50 dark:hover:bg-slate-700/30 transition"
+                        data-name="{{ p.ProductName|lower }}" data-barcode="{{ p.Barcode or '' }}">
+                        <td class="px-4 py-3.5 font-bold text-slate-800 dark:text-slate-100">
+                            {{ p.ProductName }}
+                        </td>
+                        <td class="px-4 py-3.5 text-xs font-mono text-slate-500">
+                            {{ p.Barcode or '-' }}
+                        </td>
+                        <td class="px-4 py-3.5">
+                            <span class="px-2.5 py-1 rounded-lg text-xs font-bold {% if p.PackageMultiplier > 1 %}bg-amber-100 text-amber-900 dark:bg-amber-950/60 dark:text-amber-300{% else %}bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300{% endif %}">
+                                📦 {{ p.PackageType or 'Adet' }} {% if p.PackageMultiplier > 1 %}({{ p.PackageMultiplier }} Adet/Koli){% endif %}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3.5 font-extrabold text-navy-900 dark:text-white tabular-nums">
+                            {{ "%.2f"|format(p.CurrentSalePrice) }} ₺
+                        </td>
+                        <td class="px-4 py-3.5 tabular-nums font-semibold">
+                            <span class="{% if p.StockQty <= p.CriticalStockLevel %}text-rose-600 font-extrabold{% else %}text-slate-700 dark:text-slate-300{% endif %}">
+                                {{ p.StockQty|int }} adet
+                            </span>
+                        </td>
+                        <td class="px-4 py-3.5 text-xs text-slate-400 tabular-nums">
+                            {{ p.CriticalStockLevel|int }} adet
+                        </td>
+                        <td class="px-4 py-3.5 text-right">
+                            <button type="button" 
+                                    onclick="editStockCard({{ p.ProductID }}, '{{ p.ProductName|replace("'", "\\'") }}', '{{ p.Barcode or '' }}', '{{ p.PackageType or 'Adet' }}', {{ p.PackageMultiplier or 1 }}, {{ p.CurrentSalePrice }}, {{ p.CriticalStockLevel }})"
+                                    class="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 text-xs font-bold hover:bg-amber-500 hover:text-navy-950 transition">
+                                ✏️ Düzenle
+                            </button>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="px-4 py-8 text-center text-slate-400">Tanımlı stok kartı bulunmuyor.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Yeni / Düzenle Stok Kartı Modalı -->
+<div id="stockCardModal" class="fixed inset-0 bg-navy-950/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 max-w-lg w-full p-6 space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 pb-3">
+            <h3 class="font-bold text-lg text-slate-900 dark:text-white" id="modalTitle">✨ Yeni Stok Kartı Tanımla</h3>
+            <button onclick="closeStockCardModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold">×</button>
+        </div>
+
+        <form id="stockCardForm" method="POST" action="/admin/products" class="space-y-4">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Ürün Adı *</label>
+                <input type="text" name="product_name" id="cardProductNameInput" required placeholder="Örn: Ayran 200ml, Su 0.5L..."
+                       class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 dark:bg-slate-900 text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+            </div>
+
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Barkod (Opsiyonel)</label>
+                <input type="text" name="barcode" id="cardBarcodeInput" placeholder="Barkod kodu"
+                       class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 dark:bg-slate-900 text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+            </div>
+
+            <!-- Barem ve Paket Tipi Özellikleri -->
+            <div class="p-3.5 bg-amber-500/10 dark:bg-amber-950/30 rounded-xl border border-amber-300 dark:border-amber-700/60 space-y-3">
+                <span class="block text-xs font-bold text-amber-900 dark:text-amber-300 uppercase">📦 Stok Kartı Barem / Koli Bilgileri</span>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Paket Tipi *</label>
+                        <input type="text" name="package_type" id="cardPackageTypeInput" value="24 lü Koli" required placeholder="Örn: 24 lü Koli, 12 li Paket..."
+                               class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 dark:bg-slate-900 text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Paket İçi Adet (Barem) *</label>
+                        <input type="number" step="1" min="1" value="24" name="package_multiplier" id="cardPackageMultiplierInput" required inputmode="numeric"
+                               class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 dark:bg-slate-900 text-sm tabular-nums focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                    </div>
+                </div>
+                <p class="text-[11px] text-slate-500">Mal alışında bu koli/barem özellikleri otomatik kullanılır; tekil adet fiyatı bu bareme göre hesaplanır.</p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Satış Fiyatı (₺) *</label>
+                    <input type="number" step="0.5" min="0" name="current_sale_price" id="cardSalePriceInput" required placeholder="0.00" inputmode="decimal"
+                           class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 dark:bg-slate-900 text-sm tabular-nums focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Kritik Stok Uyarı Seviyesi</label>
+                    <input type="number" step="1" min="0" value="10" name="critical_stock_level" id="cardCriticalStockInput" inputmode="decimal"
+                           class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 dark:bg-slate-900 text-sm tabular-nums focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                </div>
+            </div>
+
+            <!-- Çok Kiracılı Senkronizasyon Onayı -->
+            <div class="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700">
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" name="apply_all_tenants" value="1" checked class="rounded text-amber-500 focus:ring-amber-500">
+                    <span class="text-xs font-semibold text-slate-700 dark:text-slate-300">Bu stok kartını sistemdeki tüm işletmelerde (Tenant'larda) geçerli kıl</span>
+                </label>
+            </div>
+
+            <div class="pt-2 flex justify-end gap-2">
+                <button type="button" onclick="closeStockCardModal()" class="px-4 py-2 rounded-xl border border-slate-300 text-sm font-medium">İptal</button>
+                <button type="submit" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-sm shadow-sm">
+                    💾 Stok Kartını Kaydet
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function filterStockCards(term) {
+        const clean = (term || '').toLowerCase().trim();
+        const rows = document.querySelectorAll('.stock-card-row');
+        let count = 0;
+        rows.forEach(r => {
+            const name = r.getAttribute('data-name') || '';
+            const barcode = r.getAttribute('data-barcode') || '';
+            if (name.includes(clean) || barcode.includes(clean)) {
+                r.style.display = '';
+                count++;
+            } else {
+                r.style.display = 'none';
+            }
+        });
+        document.getElementById('totalCardCount').innerText = count;
+    }
+
+    function openNewStockCardModal() {
+        const form = document.getElementById('stockCardForm');
+        form.action = '/admin/products';
+        document.getElementById('modalTitle').innerText = '✨ Yeni Stok Kartı Tanımla';
+        document.getElementById('cardProductNameInput').value = '';
+        document.getElementById('cardBarcodeInput').value = '';
+        document.getElementById('cardPackageTypeInput').value = '24 lü Koli';
+        document.getElementById('cardPackageMultiplierInput').value = 24;
+        document.getElementById('cardSalePriceInput').value = '';
+        document.getElementById('cardCriticalStockInput').value = 10;
+        document.getElementById('stockCardModal').classList.remove('hidden');
+    }
+
+    function editStockCard(id, name, barcode, pkgType, pkgMult, price, crit) {
+        const form = document.getElementById('stockCardForm');
+        form.action = `/admin/products/${id}`;
+        document.getElementById('modalTitle').innerText = '✏️ Stok Kartını Düzenle';
+        document.getElementById('cardProductNameInput').value = name;
+        document.getElementById('cardBarcodeInput').value = barcode;
+        document.getElementById('cardPackageTypeInput').value = pkgType;
+        document.getElementById('cardPackageMultiplierInput').value = pkgMult;
+        document.getElementById('cardSalePriceInput').value = price;
+        document.getElementById('cardCriticalStockInput').value = crit;
+        document.getElementById('stockCardModal').classList.remove('hidden');
+    }
+
+    function closeStockCardModal() {
+        document.getElementById('stockCardModal').classList.add('hidden');
+    }
+</script>
+{% endblock %}

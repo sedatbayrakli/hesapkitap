@@ -192,3 +192,219 @@ def create_tenant(
 
     request.session["selected_tenant_id"] = new_t.TenantID
     return RedirectResponse(url="/admin/users", status_code=status.HTTP_303_SEE_OTHER)
+
+
+# -------------------------------------------------------------
+# STOK KARTLARI YÖNETİMİ (Tüm Tenant'lar İçin Ortak Kart Yönetimi)
+# -------------------------------------------------------------
+
+@router.get("/products", response_class=HTMLResponse)
+def products_page(
+    request: Request,
+    context: CurrentContext = Depends(require_can_manage_users),
+    db: Session = Depends(get_db)
+):
+    """
+    Stok Kartları yönetim sayfası.
+    Burada ürünün özellikleri (ad, barkod, paket/barem tipi, koli çarpanı, satış fiyatı, kritik stok)
+    tam teşekküllü bir stok kartı olarak yönetilir.
+    """
+    from app.models import Product
+
+    # Aktif işletmenin stok kartları
+    products = db.query(Product).filter(
+        Product.TenantID == context.effective_tenant_id
+    ).order_by(Product.ProductName.asc()).all()
+
+    return templates.TemplateResponse("admin_products.html", {
+        "request": request,
+        "user": context.user,
+        "active_tenant": context.active_tenant,
+        "active_branch_id": context.active_branch_id,
+        "branches": context.branches,
+        "all_tenants": context.all_tenants,
+        "products": products,
+        "csrf_token": generate_csrf_token(request),
+        "active_page": "admin_products"
+    })
+
+
+@router.post("/products")
+def create_stock_card(
+    request: Request,
+    product_name: str = Form(...),
+    barcode: Optional[str] = Form(None),
+    package_type: str = Form("Adet"),
+    package_multiplier: int = Form(1),
+    current_sale_price: float = Form(...),
+    critical_stock_level: float = Form(0.0),
+    apply_all_tenants: Optional[str] = Form(None),  # Kartı sistemdeki tüm işletmelerde geçerli kıl
+    csrf_token: str = Form(...),
+    context: CurrentContext = Depends(require_can_manage_users),
+    db: Session = Depends(get_db)
+):
+    """
+    Yeni stok kartı tanımlar.
+    Kullanıcı isterse kartı tüm işletmelerde (all tenants) tek seferde geçerli kılar.
+    """
+    from app.models import Product
+
+    if not verify_csrf_token(request, csrf_token):
+        raise HTTPException(status_code=400, detail="Geçersiz CSRF jetonu.")
+
+    mult = max(1, package_multiplier)
+    pkg_type = package_type.strip() if package_type and package_type.strip() else ("Adet" if mult == 1 else f"{mult}'li Paket")
+    bcode = barcode.strip() if barcode and barcode.strip() else None
+    pname = product_name.strip()
+
+    target_tenant_ids = [context.effective_tenant_id]
+    if apply_all_tenants == "1":
+        all_t = db.query(Tenant.TenantID).filter(Tenant.IsActive == 1).all()
+        target_tenant_ids = [t[0] for t in all_t]
+
+    for t_id in target_tenant_ids:
+        # Aynı barkod veya ad varsa o tenantta güncelle veya ekle
+        existing = db.query(Product).filter(
+            Product.TenantID == t_id,
+            (Product.ProductName == pname) | ((Product.Barcode == bcode) if bcode else False)
+        ).first()
+
+        if existing:
+            existing.ProductName = pname
+            existing.Barcode = bcode
+            existing.PackageType = pkg_type
+            existing.PackageMultiplier = mult
+            existing.CurrentSalePrice = current_sale_price
+            existing.CriticalStockLevel = critical_stock_level
+            existing.IsActive = 1
+        else:
+            new_p = Product(
+                TenantID=t_id,
+                ProductName=pname,
+                Barcode=bcode,
+                PackageType=pkg_type,
+                PackageMultiplier=mult,
+                CurrentSalePrice=current_sale_price,
+                CriticalStockLevel=critical_stock_level,
+                StockQty=0.0,
+                IsActive=1
+            )
+            db.add(new_p)
+
+    db.commit()
+    return RedirectResponse(url="/admin/products", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@router.post("/products/{product_id}")
+def update_stock_card(
+    product_id: int,
+    request: Request,
+    product_name: str = Form(...),
+    barcode: Optional[str] = Form(None),
+    package_type: str = Form("Adet"),
+    package_multiplier: int = Form(1),
+    current_sale_price: float = Form(...),
+    critical_stock_level: float = Form(0.0),
+    apply_all_tenants: Optional[str] = Form(None),
+    csrf_token: str = Form(...),
+    context: CurrentContext = Depends(require_can_manage_users),
+    db: Session = Depends(get_db)
+):
+    """Mevcut stok kartının özelliklerini günceller."""
+    from app.models import Product
+
+    if not verify_csrf_token(request, csrf_token):
+        raise HTTPException(status_code=400, detail="Geçersiz CSRF jetonu.")
+
+    prod = db.query(Product).filter(
+        Product.ProductID == product_id,
+        Product.TenantID == context.effective_tenant_id
+    ).first()
+
+    if not prod:
+        raise HTTPException(status_code=404, detail="Stok kartı bulunamadı.")
+
+    mult = max(1, package_multiplier)
+    pkg_type = package_type.strip() if package_type and package_type.strip() else ("Adet" if mult == 1 else f"{mult}'li Paket")
+    bcode = barcode.strip() if barcode and barcode.strip() else None
+    pname = product_name.strip()
+
+    prod.ProductName = pname
+    prod.Barcode = bcode
+    prod.PackageType = pkg_type
+    prod.PackageMultiplier = mult
+    prod.CurrentSalePrice = current_sale_price
+    prod.CriticalStockLevel = critical_stock_level
+
+    # Diğer işletmelerde de güncelle
+    if apply_all_tenants == "1":
+        other_prods = db.query(Product).filter(
+            Product.TenantID != context.effective_tenant_id,
+            (Product.ProductName == pname) | ((Product.Barcode == bcode) if bcode else False)
+        ).all()
+        for op in other_prods:
+            op.ProductName = pname
+            op.Barcode = bcode
+            op.PackageType = pkg_type
+            op.PackageMultiplier = mult
+            op.CurrentSalePrice = current_sale_price
+            op.CriticalStockLevel = critical_stock_level
+
+    db.commit()
+    return RedirectResponse(url="/admin/products", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@router.post("/products/sync-all")
+def sync_stock_cards_to_all_tenants(
+    request: Request,
+    csrf_token: str = Form(...),
+    context: CurrentContext = Depends(require_can_manage_users),
+    db: Session = Depends(get_db)
+):
+    """
+    Aktif işletmedeki tüm stok kartlarını diğer tüm işletmelerde eksiksiz oluşturur / senkronize eder.
+    'Her tenantta kartlar geçerli olsun' kuralını tam otomatikleştirir.
+    """
+    from app.models import Product
+
+    if not verify_csrf_token(request, csrf_token):
+        raise HTTPException(status_code=400, detail="Geçersiz CSRF jetonu.")
+
+    current_products = db.query(Product).filter(
+        Product.TenantID == context.effective_tenant_id,
+        Product.IsActive == 1
+    ).all()
+
+    other_tenants = db.query(Tenant).filter(
+        Tenant.TenantID != context.effective_tenant_id,
+        Tenant.IsActive == 1
+    ).all()
+
+    for target_t in other_tenants:
+        for p in current_products:
+            exists = db.query(Product).filter(
+                Product.TenantID == target_t.TenantID,
+                (Product.ProductName == p.ProductName) | ((Product.Barcode == p.Barcode) if p.Barcode else False)
+            ).first()
+
+            if not exists:
+                new_copy = Product(
+                    TenantID=target_t.TenantID,
+                    ProductName=p.ProductName,
+                    Barcode=p.Barcode,
+                    PackageType=p.PackageType,
+                    PackageMultiplier=p.PackageMultiplier,
+                    CurrentSalePrice=p.CurrentSalePrice,
+                    CriticalStockLevel=p.CriticalStockLevel,
+                    StockQty=0.0,
+                    IsActive=1
+                )
+                db.add(new_copy)
+            else:
+                exists.PackageType = p.PackageType
+                exists.PackageMultiplier = p.PackageMultiplier
+                exists.CurrentSalePrice = p.CurrentSalePrice
+                exists.CriticalStockLevel = p.CriticalStockLevel
+
+    db.commit()
+    return RedirectResponse(url="/admin/products", status_code=status.HTTP_303_SEE_OTHER)

@@ -45,6 +45,8 @@ CREATE TABLE IF NOT EXISTS Products (
     TenantID INTEGER NOT NULL,
     Barcode TEXT NULL,
     ProductName TEXT NOT NULL,
+    PackageType TEXT NOT NULL DEFAULT 'Adet',
+    PackageMultiplier INTEGER NOT NULL DEFAULT 1,
     CurrentSalePrice REAL NOT NULL,
     StockQty REAL NOT NULL DEFAULT 0,
     CriticalStockLevel REAL NOT NULL DEFAULT 0,

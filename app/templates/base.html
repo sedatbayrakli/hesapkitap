@@ -98,6 +98,12 @@
                     </a>
                     {% endif %}
 
+                    {% if user.CanManagePurchases or user.CanManageUsers or user.IsSuperAdmin %}
+                    <a href="/admin/products" class="px-3 py-2 rounded-xl text-xs lg:text-sm font-semibold transition flex items-center gap-1.5 {% if active_page == 'admin_products' %}bg-amber-500 text-navy-950 font-bold shadow{% else %}text-slate-300 hover:text-white hover:bg-navy-800{% endif %}">
+                        <span>🏷️</span> <span>Stok Kartları</span>
+                    </a>
+                    {% endif %}
+
                     {% if user.CanManageUsers or user.IsSuperAdmin %}
                     <a href="/admin/users" class="px-3 py-2 rounded-xl text-xs lg:text-sm font-semibold transition flex items-center gap-1.5 {% if active_page == 'admin' %}bg-amber-500 text-navy-950 font-bold shadow{% else %}text-slate-300 hover:text-white hover:bg-navy-800{% endif %}">
                         <span>⚙️</span> <span>Yönetim</span>

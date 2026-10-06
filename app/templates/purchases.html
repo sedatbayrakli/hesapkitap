@@ -58,13 +58,16 @@
                         <div id="productPickerDropdown" 
                              class="hidden absolute left-0 right-0 top-full mt-1.5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-2xl z-50 max-h-72 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
                             {% for p in products %}
-                            <div onclick="selectProductFromPicker({{ p.ProductID }}, '{{ p.ProductName|replace("'", "\\'") }}', '{{ p.Barcode or '' }}', {{ p.CurrentSalePrice }}, {{ p.StockQty }}, {{ p.LastUnitCost or 0 }})"
+                            <div onclick="selectProductFromPicker({{ p.ProductID }}, '{{ p.ProductName|replace("'", "\\'") }}', '{{ p.Barcode or '' }}', {{ p.CurrentSalePrice }}, {{ p.StockQty }}, {{ p.LastUnitCost or 0 }}, '{{ p.PackageType or 'Adet' }}', {{ p.PackageMultiplier or 1 }})"
                                  data-picker-name="{{ p.ProductName|lower }}"
                                  data-picker-barcode="{{ p.Barcode or '' }}"
                                  class="product-picker-item p-3 hover:bg-amber-50 dark:hover:bg-slate-800 cursor-pointer transition flex items-center justify-between gap-3">
                                 <div>
-                                    <div class="font-bold text-sm text-slate-800 dark:text-slate-100">
-                                        {{ p.ProductName }}
+                                    <div class="font-bold text-sm text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                                        <span>{{ p.ProductName }}</span>
+                                        <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300">
+                                            {{ p.PackageType or 'Adet' }} ({{ p.PackageMultiplier or 1 }}x)
+                                        </span>
                                     </div>
                                     <div class="flex items-center gap-2 text-xs text-slate-400 mt-0.5">
                                         {% if p.Barcode %}
@@ -117,54 +120,45 @@
                 </div>
             </div>
 
-            <!-- Barem ve Paket Seçimi (Ferah ve Dengeli Grid) -->
-            <div class="p-4 sm:p-5 bg-amber-50/60 dark:bg-slate-900/80 rounded-2xl border border-amber-200 dark:border-slate-700 space-y-4">
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                    <span class="text-xs font-bold uppercase tracking-wide text-amber-800 dark:text-amber-400 flex items-center gap-1.5">
-                        <span>📦</span> <span>Paket & Barem Seçimi (Koli / Kasa / Adet)</span>
-                    </span>
-                    <span class="text-[11px] text-slate-500 font-medium">24'lü koli, 12'li paket veya tekil adet girişleri</span>
+            <!-- Seçilen Ürünün Stok Kartı ve Barem Bilgileri (Karttan Otomatik Yüklenir) -->
+            <div class="p-4 sm:p-5 bg-slate-50 dark:bg-slate-900/80 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
+                    <div>
+                        <span class="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                            <span>📦</span> <span>Stok Kartı Özellikleri & Alış Miktarı</span>
+                        </span>
+                        <p class="text-[11px] text-slate-500 mt-0.5">Ürün seçildiğinde koli baremi ve paket tipi stok kartından otomatik yüklenir.</p>
+                    </div>
+                    <div id="stockCardBadge" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 bg-amber-500/15 border border-amber-300 dark:border-amber-700/60 rounded-xl text-xs font-bold text-amber-900 dark:text-amber-300">
+                        <span>🏷️</span> <span id="badgeCardInfo">Tekil (1 Adet)</span>
+                    </div>
                 </div>
 
-                <!-- Hızlı Barem Preset Butonları (Grid ile orantılı ve dokunmatik uyumlu) -->
-                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5">
-                    <button type="button" onclick="setPackagePreset('Adet', 1)" class="preset-btn py-2.5 px-3 rounded-xl border border-slate-300 dark:border-slate-600 text-xs font-semibold hover:border-amber-500 bg-white dark:bg-slate-800 transition flex items-center justify-center gap-1.5 shadow-sm">
-                        <span>📦</span> <span>Tekil (1x)</span>
-                    </button>
-                    <button type="button" onclick="setPackagePreset('24 lü Koli', 24)" class="preset-btn py-2.5 px-3 rounded-xl border-2 border-amber-500 bg-amber-100 dark:bg-amber-950/60 text-amber-900 dark:text-amber-300 text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm">
-                        <span>🥛</span> <span>24'lü Koli</span>
-                    </button>
-                    <button type="button" onclick="setPackagePreset('12 li Paket', 12)" class="preset-btn py-2.5 px-3 rounded-xl border border-slate-300 dark:border-slate-600 text-xs font-semibold hover:border-amber-500 bg-white dark:bg-slate-800 transition flex items-center justify-center gap-1.5 shadow-sm">
-                        <span>🧃</span> <span>12'li Paket</span>
-                    </button>
-                    <button type="button" onclick="setPackagePreset('30 lu Koli', 30)" class="preset-btn py-2.5 px-3 rounded-xl border border-slate-300 dark:border-slate-600 text-xs font-semibold hover:border-amber-500 bg-white dark:bg-slate-800 transition flex items-center justify-center gap-1.5 shadow-sm">
-                        <span>🥚</span> <span>30'lu Koli</span>
-                    </button>
-                    <button type="button" onclick="setPackagePreset('6 lı Paket', 6)" class="preset-btn py-2.5 px-3 rounded-xl border border-slate-300 dark:border-slate-600 text-xs font-semibold hover:border-amber-500 bg-white dark:bg-slate-800 transition flex items-center justify-center gap-1.5 shadow-sm">
-                        <span>🥤</span> <span>6'lı Paket</span>
-                    </button>
-                </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
-                    <!-- Paket Tipi Adı -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <!-- Stok Kartı Paket Tipi -->
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Paket Tipi Adı</label>
-                        <input type="text" name="package_type" id="packageTypeInput" value="24 lü Koli" oninput="updateBaremCalc()"
-                               class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 dark:bg-slate-900 text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Stok Kartı Paket / Barem Tipi</label>
+                        <input type="text" name="package_type" id="packageTypeInput" value="Adet" readonly
+                               class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-sm font-semibold text-slate-700 dark:text-slate-300 cursor-not-allowed">
+                        <span class="text-[10px] text-slate-400 mt-1 block">Stok kartındaki tanımlı paket tipi</span>
                     </div>
 
-                    <!-- Koli İçi Adet (Barem Çarpanı) -->
+                    <!-- Stok Kartı Koli İçi Adet (Barem) -->
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Paket İçi Adet (Barem) *</label>
-                        <input type="number" min="1" step="1" name="package_multiplier" id="packageMultiplierInput" value="24" oninput="updateBaremCalc()" inputmode="numeric"
-                               class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 dark:bg-slate-900 text-sm tabular-nums focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Paket İçi Adet (Barem Çarpanı) *</label>
+                        <input type="number" min="1" step="1" name="package_multiplier" id="packageMultiplierInput" value="1" oninput="updateBaremCalc()" inputmode="numeric"
+                               class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 dark:bg-slate-900 text-sm font-bold tabular-nums focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                        <span class="text-[10px] text-slate-400 mt-1 block">Karttan otomatik gelir, gerekirse düzenlenebilir</span>
                     </div>
 
-                    <!-- Kaç Koli / Paket Alındı -->
+                    <!-- Kaç Koli / Paket / Adet Alındı -->
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Alınan Paket / Koli Miktarı *</label>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1" id="packageCountLabel">
+                            Alınan Miktar (Paket / Koli) *
+                        </label>
                         <input type="number" min="0.1" step="any" name="package_count" id="packageCountInput" value="1" oninput="updateBaremCalc()" inputmode="decimal"
-                               class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 dark:bg-slate-900 text-sm tabular-nums focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                               class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 dark:bg-slate-900 text-sm font-extrabold tabular-nums focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                        <span class="text-[10px] text-slate-400 mt-1 block" id="packageCountSubtext">Kaç koli/paket teslim alındı</span>
                     </div>
                 </div>
             </div>
@@ -319,6 +313,19 @@
 
             <div class="grid grid-cols-2 gap-3">
                 <div>
+                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Paket / Barem Tipi *</label>
+                    <input type="text" name="package_type" value="Adet" required placeholder="Örn: 24 lü Koli, Paket, Adet..."
+                           class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 dark:bg-slate-900 text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Paket İçi Adet (Barem) *</label>
+                    <input type="number" step="1" min="1" value="1" name="package_multiplier" required inputmode="numeric"
+                           class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 dark:bg-slate-900 text-sm tabular-nums focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div>
                     <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Satış Fiyatı (₺) *</label>
                     <input type="number" step="0.5" min="0" name="current_sale_price" required placeholder="0.00" inputmode="decimal"
                            class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 dark:bg-slate-900 text-sm tabular-nums focus:ring-2 focus:ring-amber-500 focus:outline-none">
@@ -341,31 +348,14 @@
 
 {% block scripts %}
 <script>
-    // Barem Preset Seçimi
-    function setPackagePreset(typeName, multiplier) {
-        document.getElementById('packageTypeInput').value = typeName;
-        document.getElementById('packageMultiplierInput').value = multiplier;
-        
-        // Aktif buton stilini güncelle
-        const buttons = document.querySelectorAll('.preset-btn');
-        buttons.forEach(btn => {
-            if (btn.innerText.includes(typeName)) {
-                btn.className = 'preset-btn py-2.5 px-3 rounded-xl border-2 border-amber-500 bg-amber-100 dark:bg-amber-950/60 text-amber-900 dark:text-amber-300 text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm';
-            } else {
-                btn.className = 'preset-btn py-2.5 px-3 rounded-xl border border-slate-300 dark:border-slate-600 text-xs font-semibold hover:border-amber-500 bg-white dark:bg-slate-800 transition flex items-center justify-center gap-1.5 shadow-sm';
-            }
-        });
-        updateBaremCalc();
-    }
-
-    // Canlı Barem ve Tekil Adet Fiyatı Hesaplaması
+    // Canlı Barem ve Tekil Adet Fiyatı Hesaplaması (Stok Kartı Verileriyle)
     function updateBaremCalc() {
         const mult = parseInt(document.getElementById('packageMultiplierInput').value, 10) || 1;
         const count = parseFloat(document.getElementById('packageCountInput').value) || 0;
         const totalQty = Math.round(count * mult);
         const costVal = parseFloat(document.getElementById('unitCostInput').value) || 0;
         const priceMode = document.getElementById('priceModeSelect').value;
-        const pkgTypeName = document.getElementById('packageTypeInput').value || 'Koli/Paket';
+        const pkgTypeName = document.getElementById('packageTypeInput').value || 'Paket';
 
         let unitCost = 0;
         let totalCost = 0;
@@ -428,16 +418,39 @@
         }
     }
 
-    function selectProductFromPicker(id, name, barcode, salePrice, stock, lastCost) {
+    // Stok Kartından Ürün Seçildiğinde
+    function selectProductFromPicker(id, name, barcode, salePrice, stock, lastCost, packageType, packageMultiplier) {
         document.getElementById('selectedProductId').value = id;
         document.getElementById('productSearchPicker').value = name;
         document.getElementById('clearProductPickerBtn').classList.remove('hidden');
         document.getElementById('productPickerDropdown').classList.add('hidden');
 
+        // Stok Kartı Özelliklerini Alış Formuna Otomatik Yükle
+        const pkgType = packageType || 'Adet';
+        const mult = parseInt(packageMultiplier, 10) || 1;
+        document.getElementById('packageTypeInput').value = pkgType;
+        document.getElementById('packageMultiplierInput').value = mult;
+
+        // Barem Rozeti ve Açıklamaları Güncelle
+        const cardBadge = document.getElementById('stockCardBadge');
+        if (cardBadge) {
+            cardBadge.classList.remove('hidden');
+            document.getElementById('badgeCardInfo').innerText = `${pkgType} (${mult} adet)`;
+        }
+        document.getElementById('packageCountLabel').innerText = `Alınan Miktar (${pkgType}) *`;
+        document.getElementById('packageCountSubtext').innerText = `Kaç ${pkgType.toLowerCase()} teslim alındı`;
+
+        // Mod seçimini güncelle (Eğer baremli koli ise varsayılan koli fiyatı modu seç)
+        if (mult > 1) {
+            document.getElementById('priceModeSelect').value = 'package';
+        } else {
+            document.getElementById('priceModeSelect').value = 'unit';
+        }
+
         // Bilgi Kartını Aç ve Doldur
         const card = document.getElementById('selectedProductCard');
         card.classList.remove('hidden');
-        document.getElementById('cardSelectedName').innerText = name;
+        document.getElementById('cardSelectedName').innerText = `${name} — [${pkgType} (${mult}x)]`;
         document.getElementById('cardSelectedBarcode').innerText = barcode ? `Barkod: #${barcode}` : 'Barkodsuz Ürün';
         document.getElementById('infoStock').innerText = `${stock} adet`;
         document.getElementById('infoLastCost').innerText = formatMoney(parseFloat(lastCost) || 0);
@@ -446,8 +459,11 @@
         // Fiyat alanı boşsa son alış maliyetini öner
         const costInput = document.getElementById('unitCostInput');
         if (!costInput.value && lastCost && parseFloat(lastCost) > 0) {
-            costInput.value = lastCost;
-            document.getElementById('priceModeSelect').value = 'unit';
+            if (mult > 1) {
+                costInput.value = (parseFloat(lastCost) * mult).toFixed(2);
+            } else {
+                costInput.value = lastCost;
+            }
         }
 
         updateBaremCalc();
@@ -458,7 +474,12 @@
         document.getElementById('productSearchPicker').value = '';
         document.getElementById('clearProductPickerBtn').classList.add('hidden');
         document.getElementById('selectedProductCard').classList.add('hidden');
+        const cardBadge = document.getElementById('stockCardBadge');
+        if (cardBadge) cardBadge.classList.add('hidden');
+        document.getElementById('packageTypeInput').value = 'Adet';
+        document.getElementById('packageMultiplierInput').value = 1;
         filterProductPicker('');
+        updateBaremCalc();
     }
 
     // Dropdown dışına tıklandığında menüyü kapat

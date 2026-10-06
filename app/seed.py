@@ -30,11 +30,19 @@ def init_db(db: Session = None):
             # Mevcut veritabanında kolon yoksa ekle (Migration)
             cursor = raw_conn.cursor()
             cursor.execute("PRAGMA table_info(Purchases);")
-            columns = [row[1] for row in cursor.fetchall()]
-            if "PackageMultiplier" not in columns:
+            pur_columns = [row[1] for row in cursor.fetchall()]
+            if "PackageMultiplier" not in pur_columns:
                 cursor.execute("ALTER TABLE Purchases ADD COLUMN PackageMultiplier INTEGER NOT NULL DEFAULT 1;")
-            if "PackageType" not in columns:
+            if "PackageType" not in pur_columns:
                 cursor.execute("ALTER TABLE Purchases ADD COLUMN PackageType TEXT NOT NULL DEFAULT 'Adet';")
+
+            cursor.execute("PRAGMA table_info(Products);")
+            prod_columns = [row[1] for row in cursor.fetchall()]
+            if "PackageMultiplier" not in prod_columns:
+                cursor.execute("ALTER TABLE Products ADD COLUMN PackageMultiplier INTEGER NOT NULL DEFAULT 1;")
+            if "PackageType" not in prod_columns:
+                cursor.execute("ALTER TABLE Products ADD COLUMN PackageType TEXT NOT NULL DEFAULT 'Adet';")
+
             raw_conn.commit()
             cursor.close()
 
@@ -108,26 +116,28 @@ def seed_data(db: Session):
         db.add_all([patron_a, personel_a])
         db.flush()
 
-        # 10 Adet Ürün (Kantin A için)
+        # 10 Adet Ürün (Kantin A için) - Stok kartı özellikleri (Barem ve Paket Tipi)
         products_data = [
-            ("8690001", "Su 0.5L", 10.0, 100.0, 20.0, 4.0),
-            ("8690002", "Kaşarlı Tost", 55.0, 40.0, 10.0, 28.0),
-            ("8690003", "Karışık Tost", 70.0, 35.0, 10.0, 36.0),
-            ("8690004", "Soğuk Sandviç", 65.0, 25.0, 5.0, 32.0),
-            ("8690005", "Çikolatalı Gofret", 20.0, 80.0, 15.0, 11.0),
-            ("8690006", "Patates Cipsi", 35.0, 50.0, 10.0, 20.0),
-            ("8690007", "Kutu Kola 330ml", 40.0, 60.0, 15.0, 22.0),
-            ("8690008", "Ayran 200ml", 15.0, 75.0, 20.0, 7.5),
-            ("8690009", "Meyve Suyu 200ml", 20.0, 65.0, 15.0, 10.0),
-            ("8690010", "Simit", 20.0, 30.0, 10.0, 9.0),
+            ("8690001", "Su 0.5L", "24 lü Koli", 24, 10.0, 100.0, 20.0, 4.0),
+            ("8690002", "Kaşarlı Tost", "Adet", 1, 55.0, 40.0, 10.0, 28.0),
+            ("8690003", "Karışık Tost", "Adet", 1, 70.0, 35.0, 10.0, 36.0),
+            ("8690004", "Soğuk Sandviç", "Adet", 1, 65.0, 25.0, 5.0, 32.0),
+            ("8690005", "Çikolatalı Gofret", "24 lü Koli", 24, 20.0, 80.0, 15.0, 11.0),
+            ("8690006", "Patates Cipsi", "20 li Koli", 20, 35.0, 50.0, 10.0, 20.0),
+            ("8690007", "Kutu Kola 330ml", "24 lü Koli", 24, 40.0, 60.0, 15.0, 22.0),
+            ("8690008", "Ayran 200ml", "24 lü Koli", 24, 15.0, 75.0, 20.0, 7.5),
+            ("8690009", "Meyve Suyu 200ml", "27 li Koli", 27, 20.0, 65.0, 15.0, 10.0),
+            ("8690010", "Simit", "Adet", 1, 20.0, 30.0, 10.0, 9.0),
         ]
 
         created_products = []
-        for barcode, name, price, stock, crit, cost in products_data:
+        for barcode, name, pkg_type, pkg_mult, price, stock, crit, cost in products_data:
             p = Product(
                 TenantID=tenant_a.TenantID,
                 Barcode=barcode,
                 ProductName=name,
+                PackageType=pkg_type,
+                PackageMultiplier=pkg_mult,
                 CurrentSalePrice=price,
                 StockQty=stock,
                 CriticalStockLevel=crit,

@@ -362,3 +362,51 @@ def test_10_super_admin_tenant_switching(client):
         created_t = test_session.query(Tenant).filter(Tenant.TenantName == "Test Yeni Kantin").first()
         assert created_t is not None
         assert created_t.IsActive == 1
+
+
+def test_11_stock_card_and_multi_tenant_sync(client):
+    """Stok kartı özellikleri (barem, koli çarpanı) ve tüm tenant'larda geçerli kılma testi."""
+    csrf = login_as(client, "patrona", "kantin123")
+
+    # 1. Yeni Stok Kartı Tanımla (24'lü Koli baremli ve tüm tenant'larda geçerli)
+    res_card = client.post("/admin/products", data={
+        "product_name": "Test Portakal Suyu 200ml",
+        "barcode": "8699999123",
+        "package_type": "24 lü Koli",
+        "package_multiplier": 24,
+        "current_sale_price": 25.0,
+        "critical_stock_level": 15,
+        "apply_all_tenants": "1",
+        "csrf_token": csrf
+    })
+    assert res_card.status_code == 303
+
+    with TestingSessionLocal() as db:
+        # Tenant 1'de kart oluştu mu?
+        p_t1 = db.query(Product).filter(Product.TenantID == 1, Product.ProductName == "Test Portakal Suyu 200ml").first()
+        assert p_t1 is not None
+        assert p_t1.PackageType == "24 lü Koli"
+        assert p_t1.PackageMultiplier == 24
+        assert p_t1.CurrentSalePrice == 25.0
+
+        # Tenant 2'de de kart otomatik oluştu mu? (her tenantta geçerlilik)
+        p_t2 = db.query(Product).filter(Product.TenantID == 2, Product.ProductName == "Test Portakal Suyu 200ml").first()
+        assert p_t2 is not None
+        assert p_t2.PackageType == "24 lü Koli"
+        assert p_t2.PackageMultiplier == 24
+
+    # 2. Mal Alışında Karttan Otomatik Baremle Alış Yapılması
+    # 2 koli (2 * 24 = 48 adet), koli fiyatı 240 TL (tanesi 10 TL)
+    res_purchase = client.post("/purchases", data={
+        "product_id": p_t1.ProductID,
+        "price_mode": "package",
+        "unit_cost": 240.0,
+        "package_count": 2,
+        "csrf_token": csrf
+    })
+    assert res_purchase.status_code == 303
+
+    with TestingSessionLocal() as db:
+        p_t1_updated = db.query(Product).filter(Product.ProductID == p_t1.ProductID).first()
+        assert p_t1_updated.StockQty == 48.0
+
