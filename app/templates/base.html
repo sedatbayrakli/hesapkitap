@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="tr" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>{% block title %}KantinPos{% endblock %} — Çok Kiracılı Nakit Takip</title>
+    <!-- TailwindCSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        navy: {
+                            800: '#1E293B',
+                            900: '#0F172A',
+                            950: '#0B1120',
+                        },
+                        amber: {
+                            500: '#F59E0B',
+                            600: '#D97706',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Inter Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+    {% block head %}{% endblock %}
+</head>
+<body class="h-full bg-slate-50 text-slate-900 flex flex-col antialiased selection:bg-amber-500 selection:text-white">
+
+    {% if user %}
+    <!-- Üst Bar (Header) -->
+    <header class="bg-navy-900 text-white shadow-md sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Sol: Logo & İşletme Adı -->
+                <div class="flex items-center gap-3">
+                    <a href="/dashboard" class="flex items-center gap-2 font-bold text-lg text-amber-500 hover:text-amber-400">
+                        <span class="p-1.5 bg-amber-500 text-navy-900 rounded-lg text-xl leading-none">⚡</span>
+                        <span class="tracking-tight text-white hidden sm:inline">Kantin<span class="text-amber-500">Pos</span></span>
+                    </a>
+
+                    <!-- Süper Admin Tenant Seçici Dropdown -->
+                    {% if user.IsSuperAdmin and all_tenants %}
+                    <div class="relative ml-2 sm:ml-4">
+                        <form method="POST" action="/admin/switch-tenant" id="switchTenantForm" class="flex items-center">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                            <select name="tenant_id" onchange="this.form.submit()" 
+                                    class="bg-navy-800 text-amber-400 text-xs sm:text-sm font-semibold rounded-lg px-2.5 py-1.5 border border-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                                {% for t in all_tenants %}
+                                <option value="{{ t.TenantID }}" {% if active_tenant and t.TenantID == active_tenant.TenantID %}selected{% endif %}>
+                                    🏢 {{ t.TenantName }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </form>
+                    </div>
+                    {% else %}
+                    <span class="text-xs sm:text-sm font-medium text-slate-300 ml-2 border-l border-slate-700 pl-3">
+                        🏢 {{ active_tenant.TenantName if active_tenant else 'Genel Yönetim' }}
+                    </span>
+                    {% endif %}
+                </div>
+
+                <!-- Sağ: Tema, Kontrast ve Kullanıcı Menüsü -->
+                <div class="flex items-center gap-2 sm:gap-4">
+                    <button type="button" onclick="toggleHighContrast()" title="Yüksek Kontrast Modu"
+                            class="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-navy-800 transition">
+                        🔲
+                    </button>
+                    <button type="button" onclick="toggleTheme()" title="Karanlık / Aydınlık Mod"
+                            class="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-navy-800 transition">
+                        🌓
+                    </button>
+
+                    <div class="flex items-center gap-2 pl-2 border-l border-slate-700">
+                        <div class="text-right hidden md:block">
+                            <p class="text-xs font-semibold leading-none">{{ user.FullName }}</p>
+                            <span class="text-[10px] text-amber-400 font-medium">
+                                {% if user.IsSuperAdmin %}Süper Admin{% elif user.CanManageUsers %}Yönetici{% else %}Kasiyer/Personel{% endif %}
+                            </span>
+                        </div>
+                        <a href="/auth/logout" class="p-2 text-xs text-rose-400 hover:text-rose-300 hover:bg-navy-800 rounded-lg transition" title="Çıkış Yap">
+                            🚪 <span class="hidden sm:inline">Çıkış</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Alt Şube Seçici Pill'ler (Eğer birden fazla şube varsa) -->
+            {% if branches and branches|length > 1 %}
+            <div class="flex items-center gap-2 py-2 border-t border-slate-800 overflow-x-auto text-xs">
+                <span class="text-slate-400 font-medium whitespace-nowrap">Şube:</span>
+                {% for b in branches %}
+                <form method="POST" action="/admin/switch-branch" class="inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <input type="hidden" name="branch_id" value="{{ b.BranchID }}">
+                    <button type="submit" 
+                            class="px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap transition
+                            {% if active_branch_id == b.BranchID %}
+                                bg-amber-500 text-navy-950 font-bold shadow
+                            {% else %}
+                                bg-navy-800 text-slate-300 hover:bg-slate-700
+                            {% endif %}">
+                        📍 {{ b.BranchName }}
+                    </button>
+                </form>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+    </header>
+    {% endif %}
+
+    <!-- Ana İçerik -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 {% if user %}pb-24{% endif %}">
+        {% block content %}{% endblock %}
+    </main>
+
+    {% if user %}
+    <!-- Mobil Öncelikli Alt Menü Çubuğu (Bottom Navigation Bar) -->
+    <!-- YALNIZCA YETKİSİ OLAN KULLANICIYA GÖSTERİLİR (RBAC) -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-navy-900 border-t border-slate-800 z-50 text-slate-400">
+        <div class="max-w-md mx-auto flex items-center justify-around h-16 px-1">
+            
+            {% if user.CanManageSales or user.IsSuperAdmin %}
+            <a href="/sales" class="flex flex-col items-center justify-center flex-1 h-full touch-target hover:text-amber-400 transition {% if active_page == 'sales' %}text-amber-500 font-semibold{% endif %}">
+                <span class="text-xl">🛒</span>
+                <span class="text-[11px] mt-0.5">Satış</span>
+            </a>
+            {% endif %}
+
+            {% if user.CanManagePurchases or user.IsSuperAdmin %}
+            <a href="/purchases" class="flex flex-col items-center justify-center flex-1 h-full touch-target hover:text-amber-400 transition {% if active_page == 'purchases' %}text-amber-500 font-semibold{% endif %}">
+                <span class="text-xl">📦</span>
+                <span class="text-[11px] mt-0.5">Mal Alış</span>
+            </a>
+            {% endif %}
+
+            {% if user.CanManageCashRegister or user.IsSuperAdmin %}
+            <a href="/register" class="flex flex-col items-center justify-center flex-1 h-full touch-target hover:text-amber-400 transition {% if active_page == 'register' %}text-amber-500 font-semibold{% endif %}">
+                <span class="text-xl">💰</span>
+                <span class="text-[11px] mt-0.5">Kasa</span>
+            </a>
+            {% endif %}
+
+            {% if user.CanViewReports or user.IsSuperAdmin %}
+            <a href="/reports" class="flex flex-col items-center justify-center flex-1 h-full touch-target hover:text-amber-400 transition {% if active_page == 'reports' %}text-amber-500 font-semibold{% endif %}">
+                <span class="text-xl">📊</span>
+                <span class="text-[11px] mt-0.5">Raporlar</span>
+            </a>
+            {% endif %}
+
+            {% if user.CanManageUsers or user.IsSuperAdmin %}
+            <a href="/admin/users" class="flex flex-col items-center justify-center flex-1 h-full touch-target hover:text-amber-400 transition {% if active_page == 'admin' %}text-amber-500 font-semibold{% endif %}">
+                <span class="text-xl">⚙️</span>
+                <span class="text-[11px] mt-0.5">Yönetim</span>
+            </a>
+            {% endif %}
+            
+        </div>
+    </nav>
+    {% endif %}
+
+    <div id="toast-container"></div>
+    <script src="/static/app.js"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

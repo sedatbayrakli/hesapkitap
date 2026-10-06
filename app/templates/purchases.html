@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+
+{% block title %}Mal Alış & Ürün Girişi — KantinPos{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Üst Başlık ve Yeni Ürün Butonu -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-extrabold text-navy-900 dark:text-white">📦 Mal Alış & Tedarik Girişi</h1>
+            <p class="text-xs text-slate-500">Tedarikçilerden alınan ürünleri girerek stok miktarını ve maliyetleri güncelleyin.</p>
+        </div>
+        <button onclick="openNewProductModal()"
+                class="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-navy-950 font-bold text-sm rounded-xl shadow-md transition touch-target">
+            <span>+</span> <span>Yeni Ürün Tanımla</span>
+        </button>
+    </div>
+
+    <!-- Alış Giriş Form Kartı -->
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+        <form method="POST" action="/purchases" class="space-y-6">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Ürün Seçimi -->
+                <div class="space-y-2">
+                    <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300">
+                        Alınan Ürünü Seçin *
+                    </label>
+                    <select name="product_id" id="purchaseProductSelect" required onchange="handleProductSelect(this)"
+                            class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 dark:bg-slate-900 text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                        <option value="">-- Listeden Ürün Seçin --</option>
+                        {% for p in products %}
+                        <option value="{{ p.ProductID }}" 
+                                data-stock="{{ p.StockQty }}" 
+                                data-price="{{ p.CurrentSalePrice }}"
+                                data-lastcost="{{ p.LastUnitCost or 0 }}">
+                            {{ p.ProductName }} {% if p.Barcode %}(Barkod: {{ p.Barcode }}){% endif %}
+                        </option>
+                        {% endfor %}
+                    </select>
+
+                    <!-- Seçilen Ürün Bilgi Rozeti -->
+                    <div id="productInfoBadge" class="hidden mt-2 p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 text-xs text-slate-600 dark:text-slate-300 flex flex-wrap gap-4">
+                        <div>Mevcut Stok: <b id="infoStock" class="text-navy-900 dark:text-white font-bold">0</b></div>
+                        <div>Son Alış Maliyeti: <b id="infoLastCost" class="text-amber-600 font-bold">0,00 ₺</b></div>
+                        <div>Güncel Satış Fiyatı: <b id="infoSalePrice" class="text-emerald-600 font-bold">0,00 ₺</b></div>
+                    </div>
+                </div>
+
+                <!-- Tedarikçi Adı -->
+                <div class="space-y-2">
+                    <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300">
+                        Tedarikçi / Toptancı Adı
+                    </label>
+                    <input type="text" name="supplier_name" placeholder="Örn: Metro Toptan, Özlem Gıda..."
+                           class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 dark:bg-slate-900 text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                <!-- Birim Maliyet -->
+                <div class="space-y-2">
+                    <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300">
+                        Birim Alış Maliyeti (₺) *
+                    </label>
+                    <input type="number" step="0.01" min="0" name="unit_cost" id="unitCostInput" required placeholder="0.00" inputmode="decimal"
+                           class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 dark:bg-slate-900 text-sm tabular-nums focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                </div>
+
+                <!-- Alınan Miktar -->
+                <div class="space-y-2">
+                    <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300">
+                        Alınan Adet / Miktar *
+                    </label>
+                    <input type="number" step="1" min="1" name="quantity" required placeholder="Örn: 50" inputmode="decimal"
+                           class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 dark:bg-slate-900 text-sm tabular-nums focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                </div>
+
+                <!-- Şube Seçimi -->
+                <div class="space-y-2">
+                    <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300">
+                        Depo / Hedef Şube
+                    </label>
+                    <select name="branch_id" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 dark:bg-slate-900 text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                        <option value="">Merkez / Genel Stok</option>
+                        {% for b in branches %}
+                        <option value="{{ b.BranchID }}" {% if active_branch_id == b.BranchID %}selected{% endif %}>
+                            {{ b.BranchName }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <!-- Kaydet Butonu -->
+            <div class="pt-2 flex justify-end">
+                <button type="submit"
+                        class="px-6 py-3 bg-navy-900 hover:bg-navy-800 text-white font-bold rounded-xl shadow-md transition touch-target flex items-center gap-2">
+                    <span>💾 Alışı Kaydet & Stoğa Ekle</span>
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Son Alışlar Tablosu -->
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+        <div class="p-4 border-b border-slate-200 dark:border-slate-700 font-bold text-sm text-slate-800 dark:text-slate-200">
+            🕒 Son Yapılan Mal Alış Hareketleri
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm text-slate-600 dark:text-slate-300">
+                <thead class="bg-slate-50 dark:bg-slate-900/60 text-xs uppercase text-slate-500">
+                    <tr>
+                        <th class="px-4 py-3">Tarih</th>
+                        <th class="px-4 py-3">Ürün</th>
+                        <th class="px-4 py-3">Miktar</th>
+                        <th class="px-4 py-3">Birim Maliyet</th>
+                        <th class="px-4 py-3">Toplam Tutar</th>
+                        <th class="px-4 py-3">Tedarikçi</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
+                    {% for pur in recent_purchases %}
+                    <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-700/30">
+                        <td class="px-4 py-3 whitespace-nowrap text-xs">{{ pur.PurchaseDate.strftime('%d.%m.%Y %H:%M') }}</td>
+                        <td class="px-4 py-3 font-semibold text-slate-800 dark:text-slate-100">{{ pur.product.ProductName }}</td>
+                        <td class="px-4 py-3 tabular-nums">{{ pur.Quantity|int }} adet</td>
+                        <td class="px-4 py-3 tabular-nums">{{ "%.2f"|format(pur.UnitCost) }} ₺</td>
+                        <td class="px-4 py-3 font-bold text-navy-900 dark:text-amber-400 tabular-nums">{{ "%.2f"|format(pur.UnitCost * pur.Quantity) }} ₺</td>
+                        <td class="px-4 py-3 text-xs">{{ pur.SupplierName or '-' }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="px-4 py-8 text-center text-slate-400">Henüz mal alışı kaydedilmedi.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Yeni Ürün Tanımlama Modalı -->
+<div id="newProductModal" class="fixed inset-0 bg-navy-950/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 max-w-lg w-full p-6 space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 pb-3">
+            <h3 class="font-bold text-lg text-slate-900 dark:text-white">✨ Yeni Ürün Tanımla</h3>
+            <button onclick="closeNewProductModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold">×</button>
+        </div>
+        <form method="POST" action="/purchases/new-product" class="space-y-4">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Ürün Adı *</label>
+                <input type="text" name="product_name" required placeholder="Örn: Kaşarlı Tost, Meyve Suyu..."
+                       class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 dark:bg-slate-900 text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+            </div>
+
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Barkod (Opsiyonel)</label>
+                <input type="text" name="barcode" placeholder="Barkod kodu"
+                       class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 dark:bg-slate-900 text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Satış Fiyatı (₺) *</label>
+                    <input type="number" step="0.5" min="0" name="current_sale_price" required placeholder="0.00" inputmode="decimal"
+                           class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 dark:bg-slate-900 text-sm tabular-nums focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Kritik Stok Uyarı Seviyesi</label>
+                    <input type="number" step="1" min="0" value="10" name="critical_stock_level" inputmode="decimal"
+                           class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 dark:bg-slate-900 text-sm tabular-nums focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                </div>
+            </div>
+
+            <div class="pt-3 flex justify-end gap-2">
+                <button type="button" onclick="closeNewProductModal()" class="px-4 py-2 rounded-xl border border-slate-300 text-sm font-medium">İptal</button>
+                <button type="submit" class="px-5 py-2 bg-amber-500 hover:bg-amber-600 text-navy-950 font-bold rounded-xl text-sm shadow-sm">Ürünü Kaydet</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function handleProductSelect(sel) {
+        const opt = sel.options[sel.selectedIndex];
+        const badge = document.getElementById('productInfoBadge');
+        if (!sel.value) {
+            badge.classList.add('hidden');
+            return;
+        }
+        badge.classList.remove('hidden');
+        document.getElementById('infoStock').innerText = opt.getAttribute('data-stock') || '0';
+        document.getElementById('infoLastCost').innerText = formatMoney(parseFloat(opt.getAttribute('data-lastcost') || 0));
+        document.getElementById('infoSalePrice').innerText = formatMoney(parseFloat(opt.getAttribute('data-price') || 0));
+        
+        // Birim maliyet boşsa son alış maliyetini öner
+        const costInput = document.getElementById('unitCostInput');
+        if (!costInput.value && opt.getAttribute('data-lastcost')) {
+            costInput.value = opt.getAttribute('data-lastcost');
+        }
+    }
+
+    function openNewProductModal() {
+        document.getElementById('newProductModal').classList.remove('hidden');
+    }
+
+    function closeNewProductModal() {
+        document.getElementById('newProductModal').classList.add('hidden');
+    }
+</script>
+{% endblock %}

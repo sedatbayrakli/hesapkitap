@@ -1,0 +1,20 @@
+services:
+  kantinpos:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: kantinpos
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - SECRET_KEY=kantinpos-uretim-icin-guclu-gizli-anahtar-123456
+      - ADMIN_PASSWORD=admin123
+      - DB_PATH=/data/kantinpos.db
+      - COOKIE_SECURE=false
+    volumes:
+      - kantinpos_data:/data
+
+volumes:
+  kantinpos_data:
+    name: kantinpos_data

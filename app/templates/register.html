@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+
+{% block title %}Gün Sonu Kasa Sayımı — KantinPos{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Üst Başlık & Sticky Toplam Kartı -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-extrabold text-navy-900 dark:text-white">💰 Gün Sonu Kasa Sayımı</h1>
+            <p class="text-xs text-slate-500">Gün sonu fiziki nakit sayımı, POS cirosu ve masraf girişleri.</p>
+        </div>
+
+        <!-- Canlı Toplam Rozeti -->
+        <div class="bg-navy-900 text-white px-5 py-3 rounded-2xl shadow-md border border-slate-700 flex items-center justify-between sm:justify-end gap-6">
+            <div>
+                <span class="text-[10px] uppercase tracking-wider text-slate-400 block font-semibold">Hesaplanan Nakit</span>
+                <span id="stickyCashDisplay" class="text-xl font-extrabold text-emerald-400 tabular-nums">0,00 ₺</span>
+            </div>
+            <div class="border-l border-slate-700 pl-4">
+                <span class="text-[10px] uppercase tracking-wider text-slate-400 block font-semibold">Genel Toplam (Nakit+POS)</span>
+                <span id="stickyTotalDisplay" class="text-xl font-extrabold text-amber-400 tabular-nums">0,00 ₺</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Kasa Kayıt ve Sayım Formu -->
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+        <form method="POST" action="/register" id="registerForm" class="space-y-6">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="overwrite" id="overwriteInput" value="0">
+
+            <!-- Üst Ayarlar: Şube ve Tarih Seçimi -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Şube *</label>
+                    <select name="branch_id" id="regBranchSelect" onchange="loadExistingRegister()" required
+                            class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-900 text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                        {% for b in branches %}
+                        <option value="{{ b.BranchID }}" {% if active_branch_id == b.BranchID %}selected{% endif %}>
+                            {{ b.BranchName }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Kasa Tarihi *</label>
+                    <input type="date" name="register_date" id="regDateInput" value="{{ today_str }}" onchange="loadExistingRegister()" required
+                           class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-900 text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Giriş Modu</label>
+                    <div class="flex items-center rounded-lg bg-slate-200 dark:bg-slate-700 p-1">
+                        <button type="button" id="modeBanknoteBtn" onclick="switchMode('banknote')"
+                                class="flex-1 py-1 px-2 text-xs font-bold rounded-md bg-white dark:bg-slate-800 text-navy-900 dark:text-white shadow">
+                            Banknot Say
+                        </button>
+                        <button type="button" id="modeDirectBtn" onclick="switchMode('direct')"
+                                class="flex-1 py-1 px-2 text-xs font-bold rounded-md text-slate-600 dark:text-slate-400">
+                            Direkt Tutar
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mod 1: Banknot Sayımı (6 Satır) -->
+            <div id="banknoteSection" class="space-y-3">
+                <h3 class="text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide">💵 Banknot ve Madeni Para Sayımı</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {% for denom in [200, 100, 50, 20, 10, 5] %}
+                    <div class="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                        <div>
+                            <span class="font-extrabold text-base text-navy-900 dark:text-white">{{ denom }} ₺</span>
+                            <span id="sub_{{ denom }}" class="block text-xs text-slate-400 tabular-nums">0 × {{ denom }} = 0 ₺</span>
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <button type="button" onclick="adjustDenom('count_{{ denom }}', -1)" class="w-8 h-8 rounded-lg bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 font-bold text-slate-700 dark:text-slate-200 flex items-center justify-center hover:bg-slate-100">−</button>
+                            <input type="number" min="0" value="0" name="count_{{ denom }}" id="count_{{ denom }}" oninput="calcTotals()" inputmode="numeric"
+                                   class="w-14 text-center font-bold px-1 py-1 rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-800 text-sm tabular-nums">
+                            <button type="button" onclick="adjustDenom('count_{{ denom }}', 1)" class="w-8 h-8 rounded-lg bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 font-bold text-slate-700 dark:text-slate-200 flex items-center justify-center hover:bg-slate-100">+</button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Mod 2: Direkt Nakit Tutarı (Gizlenebilir) -->
+            <div id="directCashSection" class="hidden space-y-2">
+                <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300">
+                    Direkt Nakit Tutar Girişi (₺)
+                </label>
+                <input type="number" step="0.01" min="0" name="direct_cash_total" id="directCashInput" oninput="calcTotals()" placeholder="0.00" inputmode="decimal"
+                       class="w-full sm:w-1/2 px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 dark:bg-slate-900 text-sm tabular-nums focus:ring-2 focus:ring-amber-500 focus:outline-none">
+            </div>
+
+            <!-- Ek Alanlar: Devir, POS, Masraf, Notlar -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Açılış Devir Kasa (₺)</label>
+                    <input type="number" step="0.01" min="0" value="0" name="opening_cash" id="openingCashInput" oninput="calcTotals()" inputmode="decimal"
+                           class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 dark:bg-slate-900 text-sm tabular-nums focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Kredi Kartı / POS Gün Sonu (₺)</label>
+                    <input type="number" step="0.01" min="0" value="0" name="credit_card_total" id="posInput" oninput="calcTotals()" inputmode="decimal"
+                           class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 dark:bg-slate-900 text-sm tabular-nums focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Kasadan Çıkan Masraf (₺)</label>
+                    <input type="number" step="0.01" min="0" value="0" name="expense_total" id="expenseInput" oninput="calcTotals()" inputmode="decimal"
+                           class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 dark:bg-slate-900 text-sm tabular-nums focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Kasa Notları & Masraf Açıklaması</label>
+                <textarea name="notes" id="notesInput" rows="2" placeholder="Örn: Ekmek fırınına 250 TL ödendi, bozuk para fazlası devredildi..."
+                          class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 dark:bg-slate-900 text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none"></textarea>
+            </div>
+
+            <!-- Kayıt & Güncelleme Butonları -->
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">
+                <a id="zReportPdfBtn" href="#" target="_blank"
+                   class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 font-semibold text-xs hover:bg-slate-50 dark:hover:bg-slate-700 transition">
+                    📄 Bu Tarihin Z-Raporunu Aç / Yazdır
+                </a>
+
+                <button type="submit" id="saveRegisterBtn"
+                        class="w-full sm:w-auto px-8 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-lg transition touch-target flex items-center justify-center gap-2">
+                    <span>Kasayı Kaydet</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let currentMode = 'banknote';
+    const denoms = [200, 100, 50, 20, 10, 5];
+
+    function switchMode(mode) {
+        currentMode = mode;
+        const bSection = document.getElementById('banknoteSection');
+        const dSection = document.getElementById('directCashSection');
+        const bBtn = document.getElementById('modeBanknoteBtn');
+        const dBtn = document.getElementById('modeDirectBtn');
+
+        if (mode === 'banknote') {
+            bSection.classList.remove('hidden');
+            dSection.classList.add('hidden');
+            bBtn.className = 'flex-1 py-1 px-2 text-xs font-bold rounded-md bg-white dark:bg-slate-800 text-navy-900 dark:text-white shadow';
+            dBtn.className = 'flex-1 py-1 px-2 text-xs font-bold rounded-md text-slate-600 dark:text-slate-400';
+            document.getElementById('directCashInput').value = '';
+        } else {
+            bSection.classList.add('hidden');
+            dSection.classList.remove('hidden');
+            dBtn.className = 'flex-1 py-1 px-2 text-xs font-bold rounded-md bg-white dark:bg-slate-800 text-navy-900 dark:text-white shadow';
+            bBtn.className = 'flex-1 py-1 px-2 text-xs font-bold rounded-md text-slate-600 dark:text-slate-400';
+        }
+        calcTotals();
+    }
+
+    function adjustDenom(id, delta) {
+        const inp = document.getElementById(id);
+        const val = Math.max(0, (parseInt(inp.value, 10) || 0) + delta);
+        inp.value = val;
+        calcTotals();
+    }
+
+    function calcTotals() {
+        let cashTotal = 0;
+        if (currentMode === 'banknote') {
+            denoms.forEach(d => {
+                const count = parseInt(document.getElementById('count_' + d).value, 10) || 0;
+                const sub = count * d;
+                cashTotal += sub;
+                document.getElementById('sub_' + d).innerText = `${count} × ${d} = ${sub} ₺`;
+            });
+        } else {
+            cashTotal = parseFloat(document.getElementById('directCashInput').value) || 0;
+        }
+
+        const posVal = parseFloat(document.getElementById('posInput').value) || 0;
+        const total = cashTotal + posVal;
+
+        document.getElementById('stickyCashDisplay').innerText = formatMoney(cashTotal);
+        document.getElementById('stickyTotalDisplay').innerText = formatMoney(total);
+        updatePdfLink();
+    }
+
+    function updatePdfLink() {
+        const branchId = document.getElementById('regBranchSelect').value;
+        const dateVal = document.getElementById('regDateInput').value;
+        const pdfBtn = document.getElementById('zReportPdfBtn');
+        pdfBtn.href = `/register/z-report?branch_id=${branchId}&date=${dateVal}`;
+    }
+
+    async function loadExistingRegister() {
+        updatePdfLink();
+        const branchId = document.getElementById('regBranchSelect').value;
+        const dateVal = document.getElementById('regDateInput').value;
+        if (!branchId || !dateVal) return;
+
+        try {
+            const resp = await fetch(`/register/api/check?branch_id=${branchId}&date=${dateVal}`);
+            const data = await resp.json();
+            if (data.exists) {
+                const r = data.record;
+                if (r.DirectCashTotal !== null) {
+                    switchMode('direct');
+                    document.getElementById('directCashInput').value = r.DirectCashTotal;
+                } else {
+                    switchMode('banknote');
+                    denoms.forEach(d => {
+                        document.getElementById('count_' + d).value = r['Count' + d] || 0;
+                    });
+                }
+                document.getElementById('posInput').value = r.CreditCardTotal || 0;
+                document.getElementById('expenseInput').value = r.ExpenseTotal || 0;
+                document.getElementById('openingCashInput').value = r.OpeningCash || 0;
+                document.getElementById('notesInput').value = r.Notes || '';
+                document.getElementById('overwriteInput').value = '1';
+                document.getElementById('saveRegisterBtn').innerText = 'Kayıtlı Kasayı Güncelle';
+                showToast('Bu tarihe ait mevcut kayıt yüklendi.', 'info');
+            } else {
+                document.getElementById('overwriteInput').value = '0';
+                document.getElementById('saveRegisterBtn').innerText = 'Kasayı Kaydet';
+            }
+            calcTotals();
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        calcTotals();
+        updatePdfLink();
+    });
+</script>
+{% endblock %}

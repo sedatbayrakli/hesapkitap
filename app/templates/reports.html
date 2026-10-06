@@ -1,0 +1,293 @@
+{% extends "base.html" %}
+
+{% block title %}Finansal Raporlar & Kârlılık — KantinPos{% endblock %}
+
+{% block head %}
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Üst Filtreler ve Başlık -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-extrabold text-navy-900 dark:text-white">📊 Raporlar & Finansal Kârlılık</h1>
+            <p class="text-xs text-slate-500">Ciro, alış maliyetleri, kasa masrafları ve net kâr analizleri.</p>
+        </div>
+
+        <!-- Dışa Aktarma Butonları -->
+        <div class="flex items-center gap-2">
+            <a href="/reports/export-csv?range={{ selected_range }}&branch_id={{ selected_branch_id or '' }}" 
+               class="px-3.5 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 flex items-center gap-1.5 shadow-sm">
+                📥 <span>CSV İndir</span>
+            </a>
+            <a href="/register/z-report?branch_id={{ active_branch_id or 1 }}&date={{ end_date_str }}" target="_blank"
+               class="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-navy-950 text-xs font-bold flex items-center gap-1.5 shadow-sm">
+                📄 <span>Z-Raporu (PDF)</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Filtre Çubuğu (Tarih ve Şube) -->
+    <form method="GET" action="/reports" class="bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-wrap items-center gap-3">
+        <!-- Hazır Periyotlar -->
+        <div class="flex items-center bg-slate-100 dark:bg-slate-900 p-1 rounded-xl text-xs font-medium">
+            <a href="/reports?range=today&branch_id={{ selected_branch_id or '' }}" 
+               class="px-3 py-1.5 rounded-lg transition {% if selected_range == 'today' %}bg-white dark:bg-slate-800 text-navy-900 dark:text-white font-bold shadow-sm{% else %}text-slate-500{% endif %}">
+                Bugün
+            </a>
+            <a href="/reports?range=7d&branch_id={{ selected_branch_id or '' }}" 
+               class="px-3 py-1.5 rounded-lg transition {% if selected_range == '7d' %}bg-white dark:bg-slate-800 text-navy-900 dark:text-white font-bold shadow-sm{% else %}text-slate-500{% endif %}">
+                Son 7 Gün
+            </a>
+            <a href="/reports?range=30d&branch_id={{ selected_branch_id or '' }}" 
+               class="px-3 py-1.5 rounded-lg transition {% if selected_range == '30d' %}bg-white dark:bg-slate-800 text-navy-900 dark:text-white font-bold shadow-sm{% else %}text-slate-500{% endif %}">
+                Son 30 Gün
+            </a>
+        </div>
+
+        <!-- Şube Filtresi -->
+        <div class="flex items-center gap-2">
+            <span class="text-xs text-slate-400 font-semibold">Şube:</span>
+            <select name="branch_id" onchange="this.form.submit()"
+                    class="px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-600 dark:bg-slate-900 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-amber-500">
+                <option value="">🏢 Tüm Şubeler (Konsolide)</option>
+                {% for b in branches %}
+                <option value="{{ b.BranchID }}" {% if selected_branch_id == b.BranchID %}selected{% endif %}>
+                    {{ b.BranchName }}
+                </option>
+                {% endfor %}
+            </select>
+            <input type="hidden" name="range" value="{{ selected_range }}">
+        </div>
+    </form>
+
+    <!-- KPI Kartları (4 Temel Metrik) -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- Toplam Ciro -->
+        <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-between">
+            <div>
+                <span class="text-xs font-semibold uppercase text-slate-400 block tracking-wider">Toplam Ciro</span>
+                <span class="text-2xl font-black text-navy-900 dark:text-white tabular-nums mt-1 block">
+                    {{ "%.2f"|format(kpi.total_revenue) }} ₺
+                </span>
+            </div>
+            <div class="mt-3 pt-2 border-t border-slate-100 dark:border-slate-700/60 text-xs text-slate-500 flex justify-between">
+                <span>Nakit: <b>{{ "%.2f"|format(kpi.cash_revenue) }} ₺</b></span>
+                <span>Kart: <b>{{ "%.2f"|format(kpi.card_revenue) }} ₺</b></span>
+            </div>
+        </div>
+
+        <!-- Mal Alış Gideri -->
+        <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-between">
+            <div>
+                <span class="text-xs font-semibold uppercase text-slate-400 block tracking-wider">Mal Alış Gideri</span>
+                <span class="text-2xl font-black text-slate-700 dark:text-slate-300 tabular-nums mt-1 block">
+                    {{ "%.2f"|format(kpi.total_purchases) }} ₺
+                </span>
+            </div>
+            <div class="mt-3 pt-2 border-t border-slate-100 dark:border-slate-700/60 text-xs text-slate-500">
+                Toplam tedarikçi ödemeleri
+            </div>
+        </div>
+
+        <!-- Masraflar -->
+        <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-between">
+            <div>
+                <span class="text-xs font-semibold uppercase text-slate-400 block tracking-wider">Kasa Masrafları</span>
+                <span class="text-2xl font-black text-slate-700 dark:text-slate-300 tabular-nums mt-1 block">
+                    {{ "%.2f"|format(kpi.total_expense) }} ₺
+                </span>
+            </div>
+            <div class="mt-3 pt-2 border-t border-slate-100 dark:border-slate-700/60 text-xs text-slate-500">
+                Fırın, pazar, temizlik vb.
+            </div>
+        </div>
+
+        <!-- Net Kâr (Kâr Yeşil / Zarar Kırmızı) -->
+        <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-between">
+            <div>
+                <span class="text-xs font-semibold uppercase text-slate-400 block tracking-wider">Net Kâr / Marj</span>
+                <span class="text-2xl font-black tabular-nums mt-1 block {% if kpi.net_profit >= 0 %}text-emerald-600 dark:text-emerald-400{% else %}text-rose-600 dark:text-rose-400{% endif %}">
+                    {{ "%.2f"|format(kpi.net_profit) }} ₺
+                </span>
+            </div>
+            <div class="mt-3 pt-2 border-t border-slate-100 dark:border-slate-700/60 text-xs font-bold {% if kpi.net_profit >= 0 %}text-emerald-600{% else %}text-rose-600{% endif %}">
+                Kârlılık Oranı: %{{ "%.1f"|format(kpi.profit_margin) }}
+            </div>
+        </div>
+    </div>
+
+    <!-- Grafikler Izgarası (Chart.js) -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Ciro Trend Çizgi Grafiği (8 Kolon) -->
+        <div class="lg:col-span-8 bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
+            <h3 class="text-sm font-bold text-slate-800 dark:text-slate-100 mb-4">📈 Günlük Ciro Trendi (Nakit / Kart Dağılımı)</h3>
+            <div class="h-64 sm:h-72">
+                <canvas id="trendChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Ödeme Tipi Dağılımı Pasta Grafiği (4 Kolon) -->
+        <div class="lg:col-span-4 bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col">
+            <h3 class="text-sm font-bold text-slate-800 dark:text-slate-100 mb-4">💳 Ödeme Tipi Dağılımı</h3>
+            <div class="h-64 flex-1 flex items-center justify-center">
+                <canvas id="paymentPieChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Şube Karşılaştırma Grafiği (Eğer Konsolide ve birden çok şube varsa) -->
+    {% if not selected_branch_id and branches|length > 1 %}
+    <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
+        <h3 class="text-sm font-bold text-slate-800 dark:text-slate-100 mb-4">🏢 Şubeler Arası Ciro Karşılaştırması</h3>
+        <div class="h-56">
+            <canvas id="branchBarChart"></canvas>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Ürün Kârlılık ve Marj Tablosu -->
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+        <div class="p-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+            <h3 class="font-bold text-sm text-slate-800 dark:text-slate-100">🏷️ Ürün Kârlılık ve Marj Tablosu</h3>
+            <span class="text-xs text-slate-400">Son maliyete göre marj analizi</span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm text-slate-600 dark:text-slate-300">
+                <thead class="bg-slate-50 dark:bg-slate-900/60 text-xs uppercase text-slate-500">
+                    <tr>
+                        <th class="px-4 py-3">Ürün</th>
+                        <th class="px-4 py-3">Son Maliyet</th>
+                        <th class="px-4 py-3">Satış Fiyatı</th>
+                        <th class="px-4 py-3">Marj (₺)</th>
+                        <th class="px-4 py-3">Kâr Marjı (%)</th>
+                        <th class="px-4 py-3">Stok Durumu</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
+                    {% for p in product_margins %}
+                    <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-700/30">
+                        <td class="px-4 py-3 font-semibold text-slate-800 dark:text-slate-100">
+                            {{ p.ProductName }}
+                            {% if p.Barcode %}<span class="text-[10px] text-slate-400 font-mono block">#{{ p.Barcode }}</span>{% endif %}
+                        </td>
+                        <td class="px-4 py-3 tabular-nums">{{ "%.2f"|format(p.LastUnitCost) }} ₺</td>
+                        <td class="px-4 py-3 font-semibold tabular-nums">{{ "%.2f"|format(p.CurrentSalePrice) }} ₺</td>
+                        <td class="px-4 py-3 font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
+                            +{{ "%.2f"|format(p.ProfitMarginAmount) }} ₺
+                        </td>
+                        <td class="px-4 py-3">
+                            <span class="px-2 py-0.5 rounded-full text-xs font-bold {% if p.ProfitMarginPercent >= 40 %}bg-emerald-100 text-emerald-800{% else %}bg-amber-100 text-amber-800{% endif %}">
+                                %{{ "%.1f"|format(p.ProfitMarginPercent) }}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3">
+                            {% if p.IsCriticalStock %}
+                            <span class="px-2.5 py-1 rounded-full text-xs font-extrabold bg-rose-100 text-rose-700 flex items-center gap-1 w-max">
+                                ⚠️ Kritik: {{ p.StockQty|int }} adet
+                            </span>
+                            {% else %}
+                            <span class="text-xs text-slate-600 dark:text-slate-300 font-semibold">{{ p.StockQty|int }} adet</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="px-4 py-6 text-center text-slate-400">Görüntülenecek ürün bulunamadı.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const trendData = {{ trend_data | tojson }};
+    const kpiData = {{ kpi | tojson }};
+
+    // 1. Trend Çizgi Grafiği
+    const ctxTrend = document.getElementById('trendChart');
+    if (ctxTrend) {
+        new Chart(ctxTrend, {
+            type: 'line',
+            data: {
+                labels: trendData.labels,
+                datasets: [
+                    {
+                        label: 'Nakit Ciro (₺)',
+                        data: trendData.cash_series,
+                        borderColor: '#10B981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        tension: 0.3,
+                        fill: true
+                    },
+                    {
+                        label: 'Kart Ciro (₺)',
+                        data: trendData.card_series,
+                        borderColor: '#3B82F6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        tension: 0.3,
+                        fill: true
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'top' } }
+            }
+        });
+    }
+
+    // 2. Ödeme Tipi Pasta Grafiği
+    const ctxPie = document.getElementById('paymentPieChart');
+    if (ctxPie) {
+        new Chart(ctxPie, {
+            type: 'doughnut',
+            data: {
+                labels: ['Nakit', 'Kredi Kartı'],
+                datasets: [{
+                    data: [kpiData.cash_revenue, kpiData.card_revenue],
+                    backgroundColor: ['#10B981', '#3B82F6']
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom' } }
+            }
+        });
+    }
+
+    // 3. Şube Karşılaştırma Çubuğu (Varsa)
+    {% if not selected_branch_id and branches|length > 1 %}
+    const branchCompData = {{ branch_comparison | tojson }};
+    const ctxBranch = document.getElementById('branchBarChart');
+    if (ctxBranch && branchCompData) {
+        new Chart(ctxBranch, {
+            type: 'bar',
+            data: {
+                labels: branchCompData.labels,
+                datasets: [{
+                    label: 'Toplam Ciro (₺)',
+                    data: branchCompData.values,
+                    backgroundColor: '#F59E0B',
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } }
+            }
+        });
+    }
+    {% endif %}
+</script>
+{% endblock %}

@@ -1,0 +1,71 @@
+/* KantinPos Özel Stil Tanımları */
+
+:root {
+  --color-primary-navy: #0f172a;
+  --color-accent-amber: #f59e0b;
+  --color-success-green: #16a34a;
+  --color-danger-red: #dc2626;
+  --color-bg-light: #f8fafc;
+}
+
+/* Sayısal alanlar için tabular rakamlar (hizalı rakamlar) */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Dokunmatik hedefler (minimum 48px) */
+.touch-target {
+  min-height: 48px;
+  min-width: 48px;
+}
+
+/* Yüksek kontrast modu */
+body.high-contrast {
+  font-size: 1.1rem;
+}
+body.high-contrast .card {
+  border: 2px solid #000 !important;
+}
+
+/* Koyu mod ince ayarları */
+.dark body {
+  background-color: #0b1120;
+  color: #f1f5f9;
+}
+.dark .card {
+  background-color: #1e293b;
+  border-color: #334155;
+  color: #f8fafc;
+}
+.dark input, .dark select {
+  background-color: #0f172a;
+  border-color: #334155;
+  color: #f8fafc;
+}
+
+/* Toast Bildirimleri */
+#toast-container {
+  position: fixed;
+  bottom: 80px;
+  right: 16px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.toast {
+  animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
