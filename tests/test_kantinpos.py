@@ -49,10 +49,24 @@ app.dependency_overrides[get_db] = override_get_db
 @pytest.fixture(scope="session", autouse=True)
 def setup_test_database():
     """Test oturumu başında test veritabanını oluşturur ve seed eder."""
+    test_db_file = "data/test_kantinpos.db"
+    for f in [test_db_file, test_db_file + "-wal", test_db_file + "-shm"]:
+        if os.path.exists(f):
+            try:
+                os.remove(f)
+            except OSError:
+                pass
     init_db()
     with TestingSessionLocal() as db:
         seed_data(db)
     yield
+    # Test bitiminde temizle
+    for f in [test_db_file, test_db_file + "-wal", test_db_file + "-shm"]:
+        if os.path.exists(f):
+            try:
+                os.remove(f)
+            except OSError:
+                pass
 
 
 @pytest.fixture

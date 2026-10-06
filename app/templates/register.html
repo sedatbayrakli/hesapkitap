@@ -53,14 +53,14 @@
 
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Giriş Modu</label>
-                    <div class="flex items-center rounded-lg bg-slate-200 dark:bg-slate-700 p-1">
+                    <div class="grid grid-cols-2 gap-1 rounded-xl bg-slate-200 dark:bg-slate-700 p-1">
                         <button type="button" id="modeBanknoteBtn" onclick="switchMode('banknote')"
-                                class="flex-1 py-1 px-2 text-xs font-bold rounded-md bg-white dark:bg-slate-800 text-navy-900 dark:text-white shadow">
-                            Banknot Say
+                                class="py-2 px-3 text-xs font-bold rounded-lg bg-white dark:bg-slate-800 text-navy-900 dark:text-white shadow transition flex items-center justify-center gap-1">
+                            <span>💵</span> <span>Banknot Say</span>
                         </button>
                         <button type="button" id="modeDirectBtn" onclick="switchMode('direct')"
-                                class="flex-1 py-1 px-2 text-xs font-bold rounded-md text-slate-600 dark:text-slate-400">
-                            Direkt Tutar
+                                class="py-2 px-3 text-xs font-bold rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 transition flex items-center justify-center gap-1">
+                            <span>✍️</span> <span>Direkt Tutar</span>
                         </button>
                     </div>
                 </div>
@@ -68,19 +68,23 @@
 
             <!-- Mod 1: Banknot Sayımı (6 Satır) -->
             <div id="banknoteSection" class="space-y-3">
-                <h3 class="text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide">💵 Banknot ve Madeni Para Sayımı</h3>
+                <h3 class="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide flex items-center gap-1.5">
+                    <span>💵</span> <span>Banknot ve Madeni Para Sayımı</span>
+                </h3>
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     {% for denom in [200, 100, 50, 20, 10, 5] %}
-                    <div class="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                    <div class="p-3.5 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-between shadow-sm">
                         <div>
                             <span class="font-extrabold text-base text-navy-900 dark:text-white">{{ denom }} ₺</span>
-                            <span id="sub_{{ denom }}" class="block text-xs text-slate-400 tabular-nums">0 × {{ denom }} = 0 ₺</span>
+                            <span id="sub_{{ denom }}" class="block text-xs text-slate-400 tabular-nums font-medium">0 × {{ denom }} = 0 ₺</span>
                         </div>
-                        <div class="flex items-center gap-1">
-                            <button type="button" onclick="adjustDenom('count_{{ denom }}', -1)" class="w-8 h-8 rounded-lg bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 font-bold text-slate-700 dark:text-slate-200 flex items-center justify-center hover:bg-slate-100">−</button>
+                        <div class="flex items-center gap-1.5 bg-white dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
+                            <button type="button" onclick="adjustDenom('count_{{ denom }}', -1)" 
+                                    class="w-9 h-9 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 font-bold text-slate-700 dark:text-slate-200 flex items-center justify-center text-base transition active:scale-95 touch-target">−</button>
                             <input type="number" min="0" value="0" name="count_{{ denom }}" id="count_{{ denom }}" oninput="calcTotals()" inputmode="numeric"
-                                   class="w-14 text-center font-bold px-1 py-1 rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-800 text-sm tabular-nums">
-                            <button type="button" onclick="adjustDenom('count_{{ denom }}', 1)" class="w-8 h-8 rounded-lg bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 font-bold text-slate-700 dark:text-slate-200 flex items-center justify-center hover:bg-slate-100">+</button>
+                                   class="w-14 text-center font-bold px-1 py-1 rounded-lg border-0 bg-transparent text-sm tabular-nums focus:ring-0">
+                            <button type="button" onclick="adjustDenom('count_{{ denom }}', 1)" 
+                                    class="w-9 h-9 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 font-bold text-slate-700 dark:text-slate-200 flex items-center justify-center text-base transition active:scale-95 touch-target">+</button>
                         </div>
                     </div>
                     {% endfor %}
@@ -101,36 +105,36 @@
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Açılış Devir Kasa (₺)</label>
                     <input type="number" step="0.01" min="0" value="0" name="opening_cash" id="openingCashInput" oninput="calcTotals()" inputmode="decimal"
-                           class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 dark:bg-slate-900 text-sm tabular-nums focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                           class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 dark:bg-slate-900 text-sm tabular-nums focus:ring-2 focus:ring-amber-500 focus:outline-none">
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Kredi Kartı / POS Gün Sonu (₺)</label>
                     <input type="number" step="0.01" min="0" value="0" name="credit_card_total" id="posInput" oninput="calcTotals()" inputmode="decimal"
-                           class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 dark:bg-slate-900 text-sm tabular-nums focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                           class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 dark:bg-slate-900 text-sm tabular-nums focus:ring-2 focus:ring-amber-500 focus:outline-none">
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Kasadan Çıkan Masraf (₺)</label>
                     <input type="number" step="0.01" min="0" value="0" name="expense_total" id="expenseInput" oninput="calcTotals()" inputmode="decimal"
-                           class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 dark:bg-slate-900 text-sm tabular-nums focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                           class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 dark:bg-slate-900 text-sm tabular-nums focus:ring-2 focus:ring-amber-500 focus:outline-none">
                 </div>
             </div>
 
             <div>
                 <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Kasa Notları & Masraf Açıklaması</label>
                 <textarea name="notes" id="notesInput" rows="2" placeholder="Örn: Ekmek fırınına 250 TL ödendi, bozuk para fazlası devredildi..."
-                          class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 dark:bg-slate-900 text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none"></textarea>
+                          class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 dark:bg-slate-900 text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none"></textarea>
             </div>
 
-            <!-- Kayıt & Güncelleme Butonları -->
-            <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">
+            <!-- Kayıt & Güncelleme Butonları (Tam orantılı ve eşit hizalı) -->
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-5 border-t border-slate-200 dark:border-slate-700">
                 <a id="zReportPdfBtn" href="#" target="_blank"
-                   class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 font-semibold text-xs hover:bg-slate-50 dark:hover:bg-slate-700 transition">
-                    📄 Bu Tarihin Z-Raporunu Aç / Yazdır
+                   class="w-full sm:w-auto px-5 py-3 rounded-xl border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 font-semibold text-xs hover:bg-slate-50 dark:hover:bg-slate-700 transition flex items-center justify-center gap-2 shadow-sm touch-target">
+                    <span>📄</span> <span>Bu Tarihin Z-Raporunu Aç / Yazdır</span>
                 </a>
 
                 <button type="submit" id="saveRegisterBtn"
-                        class="w-full sm:w-auto px-8 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-lg transition touch-target flex items-center justify-center gap-2">
-                    <span>Kasayı Kaydet</span>
+                        class="w-full sm:w-auto min-w-[220px] px-8 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-lg shadow-emerald-600/20 transition touch-target flex items-center justify-center gap-2 text-sm">
+                    <span>💾</span> <span>Kasayı Kaydet</span>
                 </button>
             </div>
         </form>

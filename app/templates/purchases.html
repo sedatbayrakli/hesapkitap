@@ -67,22 +67,22 @@
                     <span class="text-[11px] text-slate-500">24'lü koli, 12'li paket veya tekil adet</span>
                 </div>
 
-                <!-- Hızlı Barem Preset Butonları -->
-                <div class="flex flex-wrap gap-2">
-                    <button type="button" onclick="setPackagePreset('Adet', 1)" class="preset-btn px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-600 text-xs font-semibold hover:border-amber-500 bg-white dark:bg-slate-800">
-                        Tekil Adet (1x)
+                <!-- Hızlı Barem Preset Butonları (Grid ile dengeli ve orantılı) -->
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5">
+                    <button type="button" onclick="setPackagePreset('Adet', 1)" class="preset-btn py-2.5 px-3 rounded-xl border border-slate-300 dark:border-slate-600 text-xs font-semibold hover:border-amber-500 bg-white dark:bg-slate-800 transition flex items-center justify-center gap-1.5 shadow-sm">
+                        <span>📦</span> <span>Tekil (1x)</span>
                     </button>
-                    <button type="button" onclick="setPackagePreset('24 lü Koli', 24)" class="preset-btn px-3 py-1.5 rounded-xl border border-amber-500 bg-amber-100 dark:bg-amber-950/60 text-amber-900 dark:text-amber-300 text-xs font-bold">
-                        🥛 24'lü Koli (24x)
+                    <button type="button" onclick="setPackagePreset('24 lü Koli', 24)" class="preset-btn py-2.5 px-3 rounded-xl border-2 border-amber-500 bg-amber-100 dark:bg-amber-950/60 text-amber-900 dark:text-amber-300 text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm">
+                        <span>🥛</span> <span>24'lü Koli</span>
                     </button>
-                    <button type="button" onclick="setPackagePreset('12 li Paket', 12)" class="preset-btn px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-600 text-xs font-semibold hover:border-amber-500 bg-white dark:bg-slate-800">
-                        🧃 12'li Paket (12x)
+                    <button type="button" onclick="setPackagePreset('12 li Paket', 12)" class="preset-btn py-2.5 px-3 rounded-xl border border-slate-300 dark:border-slate-600 text-xs font-semibold hover:border-amber-500 bg-white dark:bg-slate-800 transition flex items-center justify-center gap-1.5 shadow-sm">
+                        <span>🧃</span> <span>12'li Paket</span>
                     </button>
-                    <button type="button" onclick="setPackagePreset('30 lu Koli', 30)" class="preset-btn px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-600 text-xs font-semibold hover:border-amber-500 bg-white dark:bg-slate-800">
-                        🥚 30'lu Koli (30x)
+                    <button type="button" onclick="setPackagePreset('30 lu Koli', 30)" class="preset-btn py-2.5 px-3 rounded-xl border border-slate-300 dark:border-slate-600 text-xs font-semibold hover:border-amber-500 bg-white dark:bg-slate-800 transition flex items-center justify-center gap-1.5 shadow-sm">
+                        <span>🥚</span> <span>30'lu Koli</span>
                     </button>
-                    <button type="button" onclick="setPackagePreset('6 lı Paket', 6)" class="preset-btn px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-600 text-xs font-semibold hover:border-amber-500 bg-white dark:bg-slate-800">
-                        🥤 6'lı Paket (6x)
+                    <button type="button" onclick="setPackagePreset('6 lı Paket', 6)" class="preset-btn py-2.5 px-3 rounded-xl border border-slate-300 dark:border-slate-600 text-xs font-semibold hover:border-amber-500 bg-white dark:bg-slate-800 transition flex items-center justify-center gap-1.5 shadow-sm">
+                        <span>🥤</span> <span>6'lı Paket</span>
                     </button>
                 </div>
 
@@ -91,21 +91,21 @@
                     <div>
                         <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Paket Tipi Adı</label>
                         <input type="text" name="package_type" id="packageTypeInput" value="24 lü Koli" oninput="updateBaremCalc()"
-                               class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 dark:bg-slate-900 text-xs focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                               class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 dark:bg-slate-900 text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
                     </div>
 
                     <!-- Koli İçi Adet (Barem Çarpanı) -->
                     <div>
                         <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Paket İçi Adet (Barem) *</label>
                         <input type="number" min="1" step="1" name="package_multiplier" id="packageMultiplierInput" value="24" oninput="updateBaremCalc()" inputmode="numeric"
-                               class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 dark:bg-slate-900 text-xs tabular-nums focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                               class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 dark:bg-slate-900 text-sm tabular-nums focus:ring-2 focus:ring-amber-500 focus:outline-none">
                     </div>
 
                     <!-- Kaç Koli / Paket Alındı -->
                     <div>
                         <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Alınan Paket / Koli Miktarı *</label>
                         <input type="number" min="0.1" step="any" name="package_count" id="packageCountInput" value="1" oninput="updateBaremCalc()" inputmode="decimal"
-                               class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 dark:bg-slate-900 text-xs tabular-nums focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                               class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 dark:bg-slate-900 text-sm tabular-nums focus:ring-2 focus:ring-amber-500 focus:outline-none">
                     </div>
                 </div>
             </div>
@@ -118,7 +118,7 @@
                         <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300" id="costLabel">
                             Fiyat Girişi (₺) *
                         </label>
-                        <select name="price_mode" id="priceModeSelect" onchange="updateBaremCalc()" class="text-[11px] font-bold text-amber-700 dark:text-amber-400 bg-transparent border-0 focus:outline-none cursor-pointer">
+                        <select name="price_mode" id="priceModeSelect" onchange="updateBaremCalc()" class="text-xs font-bold text-amber-700 dark:text-amber-400 bg-transparent border-0 focus:outline-none cursor-pointer">
                             <option value="package">Koli / Paket Fiyatı</option>
                             <option value="unit">Tek Adet Alış Fiyatı</option>
                         </select>
@@ -143,26 +143,26 @@
                 </div>
 
                 <!-- Canlı Barem & Toplam Hesaplama Özeti -->
-                <div class="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 flex flex-col justify-center text-xs space-y-1">
-                    <div class="flex justify-between">
-                        <span class="text-slate-500">Stoğa Eklenecek Adet:</span>
-                        <b id="summaryTotalQty" class="text-navy-950 dark:text-amber-400 font-bold tabular-nums">24 adet</b>
+                <div class="p-3.5 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 flex flex-col justify-center text-xs space-y-1.5 shadow-sm">
+                    <div class="flex justify-between items-center">
+                        <span class="text-slate-500 font-medium">Stoğa Eklenecek:</span>
+                        <b id="summaryTotalQty" class="text-navy-950 dark:text-amber-400 font-bold tabular-nums text-sm">24 adet</b>
                     </div>
-                    <div class="flex justify-between">
-                        <span class="text-slate-500">1 Adet Birim Maliyeti:</span>
-                        <b id="summaryUnitCost" class="text-emerald-600 font-bold tabular-nums">0,00 ₺</b>
+                    <div class="flex justify-between items-center">
+                        <span class="text-slate-500 font-medium">1 Adet Birim Maliyeti:</span>
+                        <b id="summaryUnitCost" class="text-emerald-600 font-bold tabular-nums text-sm">0,00 ₺</b>
                     </div>
-                    <div class="flex justify-between border-t border-slate-200 dark:border-slate-700 pt-1">
-                        <span class="text-slate-700 dark:text-slate-300 font-semibold">Toplam Alış Tutarı:</span>
-                        <b id="summaryTotalCost" class="text-navy-900 dark:text-white font-black tabular-nums">0,00 ₺</b>
+                    <div class="flex justify-between items-center border-t border-slate-200 dark:border-slate-700 pt-1.5">
+                        <span class="text-slate-700 dark:text-slate-300 font-semibold">Toplam Fatura Tutarı:</span>
+                        <b id="summaryTotalCost" class="text-navy-900 dark:text-white font-extrabold tabular-nums text-base">0,00 ₺</b>
                     </div>
                 </div>
             </div>
 
-            <!-- Kaydet Butonu -->
-            <div class="pt-2 flex justify-end">
+            <!-- Kaydet Butonu (Tam genişlikte dengeli ve orantılı) -->
+            <div class="pt-2 flex flex-col sm:flex-row items-center justify-end gap-3">
                 <button type="submit"
-                        class="px-6 py-3 bg-navy-900 hover:bg-navy-800 text-white font-bold rounded-xl shadow-md transition touch-target flex items-center gap-2">
+                        class="w-full sm:w-auto min-w-[220px] px-8 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-lg shadow-emerald-600/20 transition touch-target flex items-center justify-center gap-2">
                     <span>💾 Alışı Kaydet & Stoğa Ekle</span>
                 </button>
             </div>
