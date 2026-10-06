@@ -160,7 +160,7 @@
                 <thead class="bg-slate-50 dark:bg-slate-900/60 text-xs uppercase text-slate-500">
                     <tr>
                         <th class="px-4 py-3">Ürün</th>
-                        <th class="px-4 py-3">Son Maliyet</th>
+                        <th class="px-4 py-3">1 Adet Alış Maliyeti (Tekil)</th>
                         <th class="px-4 py-3">Satış Fiyatı</th>
                         <th class="px-4 py-3">Marj (₺)</th>
                         <th class="px-4 py-3">Kâr Marjı (%)</th>
@@ -174,13 +174,16 @@
                             {{ p.ProductName }}
                             {% if p.Barcode %}<span class="text-[10px] text-slate-400 font-mono block">#{{ p.Barcode }}</span>{% endif %}
                         </td>
-                        <td class="px-4 py-3 tabular-nums">{{ "%.2f"|format(p.LastUnitCost) }} ₺</td>
+                        <td class="px-4 py-3 tabular-nums font-semibold text-slate-700 dark:text-slate-300">
+                            <span class="text-amber-600 dark:text-amber-400 font-bold">{{ "%.2f"|format(p.LastUnitCost) }} ₺</span>
+                            <span class="block text-[10px] text-slate-400">tekil maliyet</span>
+                        </td>
                         <td class="px-4 py-3 font-semibold tabular-nums">{{ "%.2f"|format(p.CurrentSalePrice) }} ₺</td>
                         <td class="px-4 py-3 font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
                             +{{ "%.2f"|format(p.ProfitMarginAmount) }} ₺
                         </td>
                         <td class="px-4 py-3">
-                            <span class="px-2 py-0.5 rounded-full text-xs font-bold {% if p.ProfitMarginPercent >= 40 %}bg-emerald-100 text-emerald-800{% else %}bg-amber-100 text-amber-800{% endif %}">
+                            <span class="px-2.5 py-1 rounded-full text-xs font-bold {% if p.ProfitMarginPercent >= 40 %}bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300{% else %}bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300{% endif %}">
                                 %{{ "%.1f"|format(p.ProfitMarginPercent) }}
                             </span>
                         </td>
